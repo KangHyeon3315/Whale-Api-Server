@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true">
+    <include resource="org/springframework/boot/logging/logback/base.xml" />
+
+    <logger name="com.whale" additivity="false">
+        <level value="TRACE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+    <logger name="org.springframework.web" additivity="false">
+        <level value="INFO"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+</configuration>

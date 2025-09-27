@@ -1,11 +1,11 @@
-package com.wahle.api
+package com.whale.api
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
 @SpringBootApplication
-class ApiApplication
+class WhaleApiServerApplication
 
 fun main(args: Array<String>) {
-    runApplication<ApiApplication>(*args)
+    runApplication<WhaleApiServerApplication>(*args)
 }
