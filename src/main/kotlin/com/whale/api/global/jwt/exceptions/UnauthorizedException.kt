@@ -3,7 +3,7 @@ package com.whale.api.global.jwt.exceptions
 import com.whale.api.global.exception.BusinessException
 import org.springframework.http.HttpStatus
 
-class UnauthorizedException: BusinessException(
+class UnauthorizedException : BusinessException(
     errorCode = HttpStatus.UNAUTHORIZED.value(),
-    message = "Unauthorized"
+    message = "Unauthorized",
 )

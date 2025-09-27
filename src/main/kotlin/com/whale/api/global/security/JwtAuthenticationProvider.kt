@@ -10,9 +10,8 @@ import org.springframework.stereotype.Component
 
 @Component
 class JwtAuthenticationProvider(
-    private val jwtCrypter: JwtCrypter
+    private val jwtCrypter: JwtCrypter,
 ) : AuthenticationProvider {
-
     private val logger = KotlinLogging.logger {}
 
     override fun authenticate(authentication: Authentication): Authentication {
@@ -30,7 +29,7 @@ class JwtAuthenticationProvider(
             JwtAuthenticationToken(
                 userIdentifier = tokenClaim.userIdentifier,
                 roles = tokenClaim.roles,
-                token = token
+                token = token,
             )
         } catch (e: TokenExpiredException) {
             // TokenExpiredException은 그대로 다시 throw하여 JwtAuthenticationFilter에서 처리하도록 함

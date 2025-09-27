@@ -26,9 +26,8 @@ class SecurityConfig(
     private val jwtAuthenticationProvider: JwtAuthenticationProvider,
     private val jwtAuthenticationEntryPoint: JwtAuthenticationEntryPoint,
     private val jwtAccessDeniedHandler: JwtAccessDeniedHandler,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
 ) {
-
     @Bean
     fun authenticationManager(): AuthenticationManager {
         return ProviderManager(listOf(jwtAuthenticationProvider))
@@ -59,21 +58,24 @@ class SecurityConfig(
 
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
-        val configuration = CorsConfiguration().apply {
-            // 허용할 Origin 설정
-            allowedOrigins = listOf(
-                "http://localhost:3000",
-                "https://whale-secretary.kro.kr/"
-            )
-            // 192.168.0.* 대역의 3000 포트 허용
-            allowedOriginPatterns = listOf(
-                "http://192.168.0.*:3000"
-            )
-            allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-            allowedHeaders = listOf("*")
-            allowCredentials = true
-            maxAge = 3600L
-        }
+        val configuration =
+            CorsConfiguration().apply {
+                // 허용할 Origin 설정
+                allowedOrigins =
+                    listOf(
+                        "http://localhost:3000",
+                        "https://whale-secretary.kro.kr/",
+                    )
+                // 192.168.0.* 대역의 3000 포트 허용
+                allowedOriginPatterns =
+                    listOf(
+                        "http://192.168.0.*:3000",
+                    )
+                allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
+                allowedHeaders = listOf("*")
+                allowCredentials = true
+                maxAge = 3600L
+            }
 
         return UrlBasedCorsConfigurationSource().apply {
             registerCorsConfiguration("/**", configuration)

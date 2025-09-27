@@ -16,15 +16,14 @@ import org.springframework.web.filter.OncePerRequestFilter
 @Component
 class JwtAuthenticationFilter(
     private val authenticationManager: AuthenticationManager,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
 ) : OncePerRequestFilter() {
-
     private val logger = LoggerFactory.getLogger(JwtAuthenticationFilter::class.java)
 
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        filterChain: FilterChain
+        filterChain: FilterChain,
     ) {
         try {
             val token = extractTokenFromRequest(request)
@@ -57,18 +56,22 @@ class JwtAuthenticationFilter(
         }
     }
 
-    private fun handleTokenExpired(request: HttpServletRequest, response: HttpServletResponse) {
+    private fun handleTokenExpired(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+    ) {
         response.status = HttpServletResponse.SC_UNAUTHORIZED
         response.contentType = MediaType.APPLICATION_JSON_VALUE
         response.characterEncoding = "UTF-8"
 
-        val errorResponse = mapOf(
-            "error" to "Token Expired",
-            "message" to "토큰이 만료되었습니다. 새로운 토큰을 발급받아 주세요.",
-            "status" to HttpServletResponse.SC_UNAUTHORIZED,
-            "path" to request.requestURI,
-            "code" to "TOKEN_EXPIRED"
-        )
+        val errorResponse =
+            mapOf(
+                "error" to "Token Expired",
+                "message" to "토큰이 만료되었습니다. 새로운 토큰을 발급받아 주세요.",
+                "status" to HttpServletResponse.SC_UNAUTHORIZED,
+                "path" to request.requestURI,
+                "code" to "TOKEN_EXPIRED",
+            )
 
         response.writer.write(objectMapper.writeValueAsString(errorResponse))
     }

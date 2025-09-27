@@ -10,7 +10,7 @@ data class TokenClaim(
     val roles: List<AuthRole>,
     val type: TokenType,
     val issuedDate: OffsetDateTime,
-    val expirationDate: OffsetDateTime
+    val expirationDate: OffsetDateTime,
 ) {
     val isExpired: Boolean
         get() = OffsetDateTime.now().isAfter(expirationDate)

@@ -11,13 +11,12 @@ import org.springframework.web.context.request.WebRequest
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
-
     private val logger = KotlinLogging.logger {}
 
     @ExceptionHandler(AccessDeniedException::class)
     fun handleAccessDeniedException(
         ex: AccessDeniedException,
-        request: WebRequest
+        request: WebRequest,
     ): ResponseEntity<ErrorResponse> {
         logger.warn { "Access denied: ${ex.message} for request: ${request.getDescription(false)}" }
 
@@ -25,34 +24,37 @@ class GlobalExceptionHandler {
             ErrorResponse(
                 status = HttpStatus.FORBIDDEN.value(),
                 path = request.getDescription(false).removePrefix("uri="),
-                message = "접근 권한이 없습니다."
-            )
+                message = "접근 권한이 없습니다.",
+            ),
         )
     }
 
     @ExceptionHandler(Exception::class)
-    fun handleException(request: HttpServletRequest, ex: Exception): ResponseEntity<ErrorResponse> {
+    fun handleException(
+        request: HttpServletRequest,
+        ex: Exception,
+    ): ResponseEntity<ErrorResponse> {
         val statusCode = ErrorCodeFactory.createErrorCode(ex)
         val path = request.requestURI
         val message = ex.message
 
-        when(statusCode) {
-            in 400 .. 499 -> {
+        when (statusCode) {
+            in 400..499 -> {
                 logger.warn(
                     "Http request error. code={}, path={}, message={}, exType={}",
                     statusCode,
                     path,
                     message,
-                    ex.javaClass.simpleName
+                    ex.javaClass.simpleName,
                 )
             }
-            in 500 .. 599 -> {
+            in 500..599 -> {
                 logger.error(
                     "Http request error. code={}, path={}, message={}, exType={}",
                     statusCode,
                     path,
                     message,
-                    ex.javaClass.simpleName
+                    ex.javaClass.simpleName,
                 )
             }
         }
@@ -63,8 +65,8 @@ class GlobalExceptionHandler {
                 ErrorResponse(
                     status = statusCode,
                     path = path,
-                    message = message ?: ""
-                )
+                    message = message ?: "",
+                ),
             )
     }
 }

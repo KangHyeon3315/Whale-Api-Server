@@ -11,15 +11,14 @@ import org.springframework.stereotype.Component
 
 @Component
 class JwtAccessDeniedHandler(
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
 ) : AccessDeniedHandler {
-
     private val logger = KotlinLogging.logger {}
 
     override fun handle(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        accessDeniedException: AccessDeniedException
+        accessDeniedException: AccessDeniedException,
     ) {
         logger.warn { "Access denied for request: ${request.requestURI} - ${accessDeniedException.message}" }
 
@@ -27,12 +26,13 @@ class JwtAccessDeniedHandler(
         response.contentType = MediaType.APPLICATION_JSON_VALUE
         response.characterEncoding = "UTF-8"
 
-        val errorResponse = mapOf(
-            "error" to "Access Denied",
-            "message" to "접근 권한이 없습니다.",
-            "status" to HttpServletResponse.SC_FORBIDDEN,
-            "path" to request.requestURI
-        )
+        val errorResponse =
+            mapOf(
+                "error" to "Access Denied",
+                "message" to "접근 권한이 없습니다.",
+                "status" to HttpServletResponse.SC_FORBIDDEN,
+                "path" to request.requestURI,
+            )
 
         response.writer.write(objectMapper.writeValueAsString(errorResponse))
     }

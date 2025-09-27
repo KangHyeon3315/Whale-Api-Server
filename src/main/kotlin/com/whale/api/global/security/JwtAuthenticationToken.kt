@@ -3,10 +3,9 @@ package com.whale.api.global.security
 import com.whale.api.global.jwt.enums.AuthRole
 import org.springframework.security.authentication.AbstractAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
-import java.util.*
+import java.util.UUID
 
 class JwtAuthenticationToken : AbstractAuthenticationToken {
-
     private val userIdentifier: UUID
     private val token: String
 
@@ -19,7 +18,7 @@ class JwtAuthenticationToken : AbstractAuthenticationToken {
     constructor(
         userIdentifier: UUID,
         roles: List<AuthRole>,
-        token: String
+        token: String,
     ) : super(roles.map { SimpleGrantedAuthority("ROLE_${it.name}") }) {
         this.userIdentifier = userIdentifier
         this.token = token

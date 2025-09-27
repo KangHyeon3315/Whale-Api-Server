@@ -10,6 +10,5 @@ class JwtProperty(
     @Value("\${jwt.secret}")
     private val secretStr: String,
 ) {
-
     val secret: SecretKey = Keys.hmacShaKeyFor(secretStr.toByteArray())
 }
