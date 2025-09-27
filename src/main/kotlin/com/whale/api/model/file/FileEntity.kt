@@ -16,8 +16,8 @@ data class FileEntity(
     @Column(name = "identifier", nullable = false)
     val identifier: UUID,
     @ManyToOne
-    @JoinColumn(name = "file_group_identifier", nullable = false)
-    val fileGroup: FileGroupEntity,
+    @JoinColumn(name = "file_group_identifier", nullable = true)
+    val fileGroup: FileGroupEntity?,
     @Column(name = "name", nullable = false)
     val name: String,
     @Column(name = "type", nullable = false)
@@ -26,8 +26,8 @@ data class FileEntity(
     val path: String,
     @Column(name = "thumbnail", nullable = true)
     val thumbnail: String?,
-    @Column(name = "sort_order", nullable = false)
-    val sortOrder: Int,
+    @Column(name = "sort_order", nullable = true)
+    val sortOrder: Int?,
     @Column(name = "created_date", nullable = false)
     val createdDate: OffsetDateTime,
     @Column(name = "modified_date", nullable = true)

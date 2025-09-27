@@ -24,6 +24,7 @@ class FileSaveWorker(
     private val tagRepository: TagRepository,
     private val fileTagRepository: FileTagRepository,
     private val fileHashRepository: FileHashRepository,
+    private val unsortedFileRepository: UnsortedFileRepository,
     private val mediaFileProperty: MediaFileProperty,
     private val objectMapper: ObjectMapper,
     private val writeTransactionTemplate: TransactionTemplate,
@@ -54,68 +55,64 @@ class FileSaveWorker(
     private fun processFileSave(payload: FileSaveTaskPayload) {
         val basePath = Paths.get(payload.basePath)
         val sourcePath = basePath.resolve(payload.path)
-        
-        if (!Files.exists(sourcePath)) {
-            throw RuntimeException("Source file not found: ${payload.path}")
+
+        // 파일 경로 유효성 검증
+        if (!Files.exists(sourcePath) || !Files.isRegularFile(sourcePath)) {
+            throw RuntimeException("File not found: ${payload.path}")
         }
-        
-        // 파일 그룹 생성 (단일 파일용)
-        val fileGroupIdentifier = UUID.randomUUID()
-        val now = OffsetDateTime.now()
-        
-        val fileGroup = FileGroupEntity(
-            identifier = fileGroupIdentifier,
-            name = payload.name,
-            type = payload.type,
-            thumbnail = null,
-            createdDate = now,
-            modifiedDate = now
-        )
-        
-        fileGroupRepository.save(fileGroup)
-        
-        // 파일을 새 위치로 이동
+
+        // 파일 해시 계산 및 중복 검사 (모든 파일에 대해)
+        val hash = calculateFileHash(sourcePath)
+        val existingHash = fileHashRepository.findByHash(hash)
+        if (existingHash != null) {
+            throw RuntimeException("File already exists with hash: $hash")
+        }
+
+        // 파일을 새 위치로 이동 (non_group 디렉토리 사용)
         val extension = sourcePath.toString().substringAfterLast('.').lowercase()
-        val newPath = Paths.get(mediaFileProperty.filesPath, "single", "${payload.fileIdentifier}.$extension")
+        val newPath = Paths.get(mediaFileProperty.filesPath, "non_group", "${payload.fileIdentifier}.$extension")
         val newFullPath = basePath.resolve(newPath)
-        
+
         Files.createDirectories(newFullPath.parent)
         Files.move(sourcePath, newFullPath)
-        
-        // 파일 엔티티 생성
+
+        val now = OffsetDateTime.now()
+
+        // 파일 엔티티 생성 (파일 그룹 없이)
         val fileEntity = FileEntity(
             identifier = payload.fileIdentifier,
-            fileGroup = fileGroup,
+            fileGroup = null, // 단일 파일은 그룹 없음
             name = payload.name,
             type = payload.type,
             path = newPath.toString(),
             thumbnail = null,
-            sortOrder = 0,
+            sortOrder = null, // 단일 파일은 정렬 순서 없음
             createdDate = now,
             modifiedDate = now,
             lastViewDate = null
         )
-        
+
         fileRepository.save(fileEntity)
-        
-        // 파일 해시 계산 (이미지 파일만)
-        if (extension in MediaFileProperty.IMAGE_EXTENSIONS.map { it.removePrefix(".") }) {
-            try {
-                val hash = calculateFileHash(newFullPath)
-                val fileHashEntity = FileHashEntity(
-                    identifier = UUID.randomUUID(),
-                    file = fileEntity,
-                    hash = hash
-                )
-                fileHashRepository.save(fileHashEntity)
-            } catch (e: Exception) {
-                logger.warn("Failed to calculate hash for file: $newFullPath", e)
-            }
-        }
-        
-        // 태그 처리
+
+        // 파일 해시 저장
+        val fileHashEntity = FileHashEntity(
+            identifier = UUID.randomUUID(),
+            file = fileEntity,
+            hash = hash
+        )
+        fileHashRepository.save(fileHashEntity)
+
+        // 태그 처리 - 존재하지 않는 태그는 새로 생성
+        val existingTags = tagRepository.findByNameAndTypeIn(
+            payload.tags.map { it.name to it.type }
+        )
+        val existingTagMap = existingTags.associateBy { it.name to it.type }
+
+        val allTags = mutableListOf<TagEntity>()
+
         payload.tags.forEach { tagDto ->
-            val tag = tagRepository.findByName(tagDto.name) ?: run {
+            val tagKey = tagDto.name to tagDto.type
+            val tag = existingTagMap[tagKey] ?: run {
                 val newTag = TagEntity(
                     identifier = UUID.randomUUID(),
                     name = tagDto.name,
@@ -124,15 +121,22 @@ class FileSaveWorker(
                 tagRepository.save(newTag)
                 newTag
             }
-            
-            val fileTag = FileTagEntity(
+            allTags.add(tag)
+        }
+
+        // 파일-태그 연결
+        val fileTags = allTags.map { tag ->
+            FileTagEntity(
                 identifier = UUID.randomUUID(),
                 file = fileEntity,
                 tag = tag
             )
-            fileTagRepository.save(fileTag)
         }
-        
+        fileTagRepository.saveAll(fileTags)
+
+        // unsorted file 제거 (해당하는 경우)
+        unsortedFileRepository.deleteByPath(payload.path)
+
         logger.info("File saved successfully: ${payload.fileIdentifier}")
     }
     

@@ -5,12 +5,12 @@ import java.util.UUID
 
 data class FileResponse(
     val identifier: UUID,
-    val fileGroupIdentifier: UUID,
+    val fileGroupIdentifier: UUID?,
     val name: String,
     val type: String,
     val path: String,
     val thumbnail: String?,
-    val sortOrder: Int,
+    val sortOrder: Int?,
     val createdDate: OffsetDateTime,
     val modifiedDate: OffsetDateTime?,
     val lastViewDate: OffsetDateTime?,

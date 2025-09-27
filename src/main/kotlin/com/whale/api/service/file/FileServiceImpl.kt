@@ -4,11 +4,11 @@ import com.whale.api.controller.file.request.*
 import com.whale.api.controller.file.response.*
 import com.whale.api.global.config.MediaFileProperty
 import com.whale.api.model.file.exception.FileNotFoundException
-import com.whale.api.model.file.exception.InvalidPathException
 import com.whale.api.model.file.exception.UnsupportedMediaFileTypeException
 import com.whale.api.repository.file.*
 import com.whale.api.model.taskqueue.dto.FileSaveTaskPayload
 import com.whale.api.model.taskqueue.dto.TagDto
+import com.whale.api.service.file.util.*
 import com.whale.api.service.taskqueue.TaskQueueService
 import mu.KotlinLogging
 import org.springframework.core.io.Resource
@@ -18,15 +18,11 @@ import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
-import java.awt.Image
-import java.awt.image.BufferedImage
 import java.io.FileInputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.security.MessageDigest
 import java.util.*
-import javax.imageio.ImageIO
 
 @Service
 class FileServiceImpl(
@@ -40,64 +36,30 @@ class FileServiceImpl(
     private val mediaFileProperty: MediaFileProperty,
     private val taskQueueService: TaskQueueService,
     private val writeTransactionTemplate: TransactionTemplate,
+    // Utility classes
+    private val filePathUtil: FilePathUtil,
+    private val fileHashUtil: FileHashUtil,
+    private val thumbnailUtil: ThumbnailUtil,
+    private val fileSortUtil: FileSortUtil,
+    private val fileTreeBuilder: FileTreeBuilder,
+    private val tagUtil: TagUtil,
 ) : FileService {
 
     private val logger = KotlinLogging.logger {}
 
     override fun getUnsortedTree(path: String, cursor: String?, limit: Int, sort: String): FileTreeResponse {
-        val basePath = Paths.get(mediaFileProperty.basePath)
-        val targetPath = basePath.resolve(path)
+        val targetPath = filePathUtil.resolveBasePath(path)
+        filePathUtil.validatePath(targetPath)
+        filePathUtil.validateDirectoryExists(targetPath, "Directory not found: $path")
 
-        validatePath(targetPath)
+        // 파일 트리 구성
+        val fileDetails = fileTreeBuilder.buildFileTree(targetPath)
 
-        if (!Files.isDirectory(targetPath)) {
-            throw InvalidPathException("Directory not found: $targetPath")
-        }
+        // 정렬 적용
+        val sortedFiles = fileSortUtil.sortFiles(fileDetails, sort)
 
-        val fileDetails = mutableListOf<FileTreeItem>()
-
-        Files.list(targetPath).use { stream ->
-            stream.forEach { filePath ->
-                val fileName = filePath.fileName.toString()
-                val isDir = Files.isDirectory(filePath)
-                val extension = if (!isDir) {
-                    val dotIndex = fileName.lastIndexOf('.')
-                    if (dotIndex > 0) fileName.substring(dotIndex + 1).lowercase() else ""
-                } else ""
-
-                fileDetails.add(
-                    FileTreeItem(
-                        name = fileName,
-                        isDir = isDir,
-                        extension = extension
-                    )
-                )
-            }
-        }
-
-        // 정렬 로직
-        val sortedFiles = when (sort) {
-            "number" -> {
-                fileDetails.sortedWith(compareBy<FileTreeItem> { !it.isDir }
-                    .thenBy { file ->
-                        val numbers = Regex("(\\d+)").findAll(file.name)
-                            .map { it.value.toInt() }
-                            .toList()
-                        numbers.firstOrNull() ?: 0
-                    }
-                    .thenBy { it.name })
-            }
-            else -> {
-                fileDetails.sortedWith(compareBy<FileTreeItem> { !it.isDir }
-                    .thenBy { it.name })
-            }
-        }
-
-        // 커서 기반 페이지네이션
-        val filteredFiles = cursor?.let { cursorName ->
-            val cursorIndex = sortedFiles.indexOfFirst { it.name == cursorName }
-            if (cursorIndex >= 0) sortedFiles.drop(cursorIndex + 1) else sortedFiles
-        } ?: sortedFiles
+        // 커서 기반 필터링
+        val filteredFiles = fileSortUtil.filterFilesByCursor(sortedFiles, cursor)
 
         // 리밋 적용
         val limitedFiles = filteredFiles.take(limit)
@@ -106,130 +68,42 @@ class FileServiceImpl(
     }
 
     override fun getThumbnail(path: String): ResponseEntity<Resource> {
-        val basePath = Paths.get(mediaFileProperty.basePath)
-        val filePath = basePath.resolve(path)
+        val filePath = filePathUtil.resolveBasePath(path)
+        filePathUtil.validatePath(filePath)
+        filePathUtil.validateFileExists(filePath, "File not found: $path")
 
-        validatePath(filePath)
-
-        if (!Files.isRegularFile(filePath)) {
-            throw FileNotFoundException("File not found: $path")
-        }
-
-        val extension = filePath.toString().substringAfterLast('.').lowercase()
-        val isImage = extension in MediaFileProperty.IMAGE_EXTENSIONS.map { it.removePrefix(".") }
-        val isVideo = extension in MediaFileProperty.VIDEO_EXTENSIONS.map { it.removePrefix(".") }
+        val extension = filePathUtil.getFileExtension(filePath)
+        val isImage = filePathUtil.isImageFile(extension)
+        val isVideo = filePathUtil.isVideoFile(extension)
 
         if (!isImage && !isVideo) {
             throw UnsupportedMediaFileTypeException("Unsupported media file type: $extension")
         }
 
-        val thumbnailPath = generateThumbnailPath(path)
+        val thumbnailPath = filePathUtil.createThumbnailPath(path)
 
         // 이미 썸네일이 존재하면 반환
-        if (Files.exists(thumbnailPath)) {
-            val resource = org.springframework.core.io.FileSystemResource(thumbnailPath)
-            return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_TYPE, "image/jpeg")
-                .body(resource)
+        if (thumbnailUtil.thumbnailExists(thumbnailPath)) {
+            return thumbnailUtil.getThumbnailResource(thumbnailPath)
         }
 
         // 썸네일 생성
         return if (isImage) {
-            generateImageThumbnail(filePath, thumbnailPath)
+            thumbnailUtil.generateImageThumbnail(filePath, thumbnailPath)
         } else {
-            generateVideoThumbnail(filePath, thumbnailPath)
+            thumbnailUtil.generateVideoThumbnail(filePath, thumbnailPath)
         }
     }
 
-    private fun generateThumbnailPath(originalPath: String): Path {
-        val basePath = Paths.get(mediaFileProperty.basePath)
-        val thumbnailDir = basePath.resolve(mediaFileProperty.thumbnailPath)
-        Files.createDirectories(thumbnailDir)
-        return thumbnailDir.resolve("$originalPath.thumbnail.jpg")
-    }
 
-    private fun generateImageThumbnail(filePath: Path, thumbnailPath: Path): ResponseEntity<Resource> {
-        try {
-            Files.createDirectories(thumbnailPath.parent)
-
-            val originalImage = ImageIO.read(filePath.toFile())
-            val thumbnailImage = createThumbnail(originalImage, 512, 512)
-
-            ImageIO.write(thumbnailImage, "jpg", thumbnailPath.toFile())
-
-            val resource = org.springframework.core.io.FileSystemResource(thumbnailPath)
-            return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_TYPE, "image/jpeg")
-                .body(resource)
-        } catch (e: Exception) {
-            logger.error("Error generating image thumbnail for $filePath", e)
-            throw RuntimeException("Failed to generate thumbnail", e)
-        }
-    }
-
-    private fun generateVideoThumbnail(filePath: Path, thumbnailPath: Path): ResponseEntity<Resource> {
-        try {
-            Files.createDirectories(thumbnailPath.parent)
-
-            // FFmpeg를 사용한 비디오 썸네일 생성
-            val processBuilder = ProcessBuilder(
-                "ffmpeg",
-                "-i", filePath.toString(),
-                "-ss", "1",
-                "-vframes", "1",
-                "-vf", "scale=512:-1",
-                "-y",
-                thumbnailPath.toString()
-            )
-
-            val process = processBuilder.start()
-            val exitCode = process.waitFor()
-
-            if (exitCode == 0 && Files.exists(thumbnailPath) && Files.size(thumbnailPath) > 0) {
-                val resource = org.springframework.core.io.FileSystemResource(thumbnailPath)
-                return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_TYPE, "image/jpeg")
-                    .body(resource)
-            } else {
-                logger.error("FFmpeg failed to generate thumbnail for $filePath, exit code: $exitCode")
-                throw RuntimeException("Failed to generate video thumbnail")
-            }
-        } catch (e: Exception) {
-            logger.error("Error generating video thumbnail for $filePath", e)
-            throw RuntimeException("Failed to generate thumbnail", e)
-        }
-    }
-
-    private fun createThumbnail(originalImage: BufferedImage, maxWidth: Int, maxHeight: Int): BufferedImage {
-        val originalWidth = originalImage.width
-        val originalHeight = originalImage.height
-
-        val ratio = minOf(maxWidth.toDouble() / originalWidth, maxHeight.toDouble() / originalHeight)
-        val newWidth = (originalWidth * ratio).toInt()
-        val newHeight = (originalHeight * ratio).toInt()
-
-        val scaledImage = originalImage.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH)
-        val thumbnailImage = BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB)
-
-        val graphics = thumbnailImage.createGraphics()
-        graphics.drawImage(scaledImage, 0, 0, null)
-        graphics.dispose()
-
-        return thumbnailImage
-    }
 
     override fun getImage(path: String): ResponseEntity<Resource> {
-        val basePath = Paths.get(mediaFileProperty.basePath)
-        val filePath = basePath.resolve(path)
+        val filePath = filePathUtil.resolveBasePath(path)
+        filePathUtil.validatePath(filePath)
+        filePathUtil.validateFileExists(filePath, "File not found: $path")
 
-        validatePath(filePath)
-
-        if (!Files.isRegularFile(filePath)) {
-            throw FileNotFoundException("File not found: $path")
-        }
-
-        val extension = filePath.toString().substringAfterLast('.').lowercase()
-        if (extension !in MediaFileProperty.IMAGE_EXTENSIONS.map { it.removePrefix(".") }) {
+        val extension = filePathUtil.getFileExtension(filePath)
+        if (!filePathUtil.isImageFile(extension)) {
             throw UnsupportedMediaFileTypeException("Unsupported image file type: $extension")
         }
 
@@ -242,15 +116,11 @@ class FileServiceImpl(
     }
 
     override fun getVideo(path: String, range: String?): ResponseEntity<Resource> {
-        val basePath = Paths.get(mediaFileProperty.basePath)
-        val filePath = basePath.resolve(path)
+        val filePath = filePathUtil.resolveBasePath(path)
+        filePathUtil.validateFileExists(filePath, "File not found: $path")
 
-        if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
-            throw FileNotFoundException("File not found: $path")
-        }
-
-        val extension = filePath.toString().substringAfterLast('.').lowercase()
-        if (extension !in MediaFileProperty.VIDEO_EXTENSIONS.map { it.removePrefix(".") }) {
+        val extension = filePathUtil.getFileExtension(filePath)
+        if (!filePathUtil.isVideoFile(extension)) {
             throw UnsupportedMediaFileTypeException("Unsupported video file type: $extension")
         }
 
@@ -298,10 +168,8 @@ class FileServiceImpl(
     }
 
     override fun deleteFileByPath(request: DeleteFileByPathRequest) {
-        val basePath = Paths.get(mediaFileProperty.basePath)
-        val filePath = basePath.resolve(request.path)
-
-        validatePath(filePath)
+        val filePath = filePathUtil.resolveBasePath(request.path)
+        filePathUtil.validatePath(filePath)
 
         if (!Files.exists(filePath)) {
             throw FileNotFoundException("File not found: ${request.path}")
@@ -362,18 +230,12 @@ class FileServiceImpl(
         val file = fileRepository.findById(fileIdentifier)
             .orElseThrow { FileNotFoundException("File not found: $fileIdentifier") }
 
-        val fileTags = fileTagRepository.findByFileIdentifiersWithTag(listOf(fileIdentifier))
-        val tags = fileTags.map { fileTag ->
-            TagResponse(
-                identifier = fileTag.tag.identifier,
-                name = fileTag.tag.name,
-                type = fileTag.tag.type
-            )
-        }
+        val tagMap = tagUtil.getFileTagResponses(listOf(fileIdentifier))
+        val tags = tagMap[fileIdentifier] ?: emptyList()
 
         return FileResponse(
             identifier = file.identifier,
-            fileGroupIdentifier = file.fileGroup.identifier,
+            fileGroupIdentifier = file.fileGroup?.identifier,
             name = file.name,
             type = file.type,
             path = file.path,
@@ -449,18 +311,12 @@ class FileServiceImpl(
 
     override fun saveFileGroup(request: SaveFileGroupRequest): FileGroupResponse {
         return writeTransactionTemplate.execute {
-            val basePath = Paths.get(mediaFileProperty.basePath)
-            val sourcePath = basePath.resolve(request.path)
-
-            validatePath(sourcePath)
-
-            if (!Files.isDirectory(sourcePath)) {
-                throw FileNotFoundException("Directory not found: ${request.path}")
-            }
+            val sourcePath = filePathUtil.resolveBasePath(request.path)
+            filePathUtil.validatePath(sourcePath)
+            filePathUtil.validateDirectoryExists(sourcePath, "Directory not found: ${request.path}")
 
             val identifier = UUID.randomUUID()
-            val newPath = Paths.get(mediaFileProperty.filesPath, "group", identifier.toString())
-            val newFullPath = basePath.resolve(newPath)
+            val newFullPath = filePathUtil.createFileGroupPath(identifier.toString())
 
             val now = java.time.OffsetDateTime.now()
             val fileGroup = com.whale.api.model.file.FileGroupEntity(
@@ -499,7 +355,7 @@ class FileServiceImpl(
                             fileGroup = fileGroup,
                             name = nameWithoutExtension,
                             type = request.type,
-                            path = newPath.resolve(newFileName).toString(),
+                            path = "group/${identifier}/$newFileName",
                             thumbnail = null,
                             sortOrder = index,
                             createdDate = now,
@@ -510,9 +366,8 @@ class FileServiceImpl(
                         files.add(fileEntity)
 
                         // 파일 해시 계산 (이미지 파일만)
-                        if (extension in MediaFileProperty.IMAGE_EXTENSIONS.map { it.removePrefix(".") }) {
-                            try {
-                                val hash = calculateFileHash(newFilePath)
+                        if (filePathUtil.isImageFile(extension)) {
+                            fileHashUtil.calculateFileHashSafely(newFilePath)?.let { hash ->
                                 hashes.add(
                                     com.whale.api.model.file.FileHashEntity(
                                         identifier = UUID.randomUUID(),
@@ -520,8 +375,6 @@ class FileServiceImpl(
                                         hash = hash
                                     )
                                 )
-                            } catch (e: Exception) {
-                                logger.warn("Failed to calculate hash for file: $newFilePath", e)
                             }
                         }
                     }
@@ -566,7 +419,7 @@ class FileServiceImpl(
 
             FileResponse(
                 identifier = file.identifier,
-                fileGroupIdentifier = file.fileGroup.identifier,
+                fileGroupIdentifier = file.fileGroup?.identifier,
                 name = file.name,
                 type = file.type,
                 path = file.path,
@@ -739,7 +592,7 @@ class FileServiceImpl(
 
             FileResponse(
                 identifier = file.identifier,
-                fileGroupIdentifier = file.fileGroup.identifier,
+                fileGroupIdentifier = file.fileGroup?.identifier,
                 name = file.name,
                 type = file.type,
                 path = file.path,
@@ -753,26 +606,5 @@ class FileServiceImpl(
         }
     }
 
-    private fun calculateFileHash(filePath: Path): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        Files.newInputStream(filePath).use { inputStream ->
-            val buffer = ByteArray(8192)
-            var bytesRead: Int
-            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                digest.update(buffer, 0, bytesRead)
-            }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
 
-    private fun validatePath(path: Path) {
-        val pathStr = path.toString()
-        if (pathStr.contains("..")) {
-            throw InvalidPathException("Path contains invalid characters: $pathStr")
-        }
-
-        if (!Files.exists(path)) {
-            throw InvalidPathException("Path does not exist: $pathStr")
-        }
-    }
 }
