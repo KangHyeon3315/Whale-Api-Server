@@ -1,14 +1,77 @@
-CREATE TABLE IF NOT EXISTS media_file
+CREATE TABLE IF NOT EXISTS file_group
 (
-    identifier       UUID    NOT NULL,
-    type             VARCHAR NOT NULL,
-    group_identifier UUID,
-    hash             VARCHAR NOT NULL,
-    name             VARCHAR NOT NULL,
-    path             VARCHAR NOT NULL,
-    tag              VARCHAR NOT NULL,
+    identifier    UUID                     NOT NULL,
+    name          VARCHAR                  NOT NULL,
+    type          VARCHAR                  NOT NULL,
+    thumbnail     VARCHAR                  NULL,
+    created_date  TIMESTAMP WITH TIME ZONE NOT NULL,
+    modified_date TIMESTAMP WITH TIME ZONE NULL,
     PRIMARY KEY (identifier)
 );
+
+CREATE TABLE IF NOT EXISTS file
+(
+    identifier             UUID                     NOT NULL,
+    file_group_identifier  UUID                     NOT NULL,
+    name                   VARCHAR                  NOT NULL,
+    type                   VARCHAR                  NOT NULL,
+    path                   VARCHAR                  NOT NULL,
+    thumbnail              VARCHAR                  NULL,
+    sort_order             INTEGER                  NOT NULL,
+    created_date           TIMESTAMP WITH TIME ZONE NOT NULL,
+    modified_date          TIMESTAMP WITH TIME ZONE NULL,
+    last_view_date         TIMESTAMP WITH TIME ZONE NULL,
+    PRIMARY KEY (identifier),
+    FOREIGN KEY (file_group_identifier) REFERENCES file_group (identifier)
+);
+
+CREATE TABLE IF NOT EXISTS file_hash
+(
+    identifier      UUID    NOT NULL,
+    file_identifier UUID    NOT NULL,
+    hash            VARCHAR NOT NULL,
+    PRIMARY KEY (identifier),
+    FOREIGN KEY (file_identifier) REFERENCES file (identifier)
+);
+
+CREATE TABLE IF NOT EXISTS tag
+(
+    identifier UUID    NOT NULL,
+    name       VARCHAR NOT NULL,
+    type       VARCHAR NOT NULL,
+    PRIMARY KEY (identifier)
+);
+
+CREATE TABLE IF NOT EXISTS file_tag
+(
+    identifier      UUID NOT NULL,
+    file_identifier UUID NOT NULL,
+    tag_identifier  UUID NOT NULL,
+    PRIMARY KEY (identifier),
+    FOREIGN KEY (file_identifier) REFERENCES file (identifier),
+    FOREIGN KEY (tag_identifier) REFERENCES tag (identifier)
+);
+
+CREATE TABLE IF NOT EXISTS file_group_tag
+(
+    identifier             UUID NOT NULL,
+    file_group_identifier  UUID NOT NULL,
+    tag_identifier         UUID NOT NULL,
+    PRIMARY KEY (identifier),
+    FOREIGN KEY (file_group_identifier) REFERENCES file_group (identifier),
+    FOREIGN KEY (tag_identifier) REFERENCES tag (identifier)
+);
+
+CREATE TABLE IF NOT EXISTS unsorted_file
+(
+    identifier UUID         NOT NULL,
+    path       VARCHAR      NOT NULL,
+    name       VARCHAR      NOT NULL,
+    file_hash  VARCHAR(64)  NULL,
+    encoding   VARCHAR      NULL,
+    PRIMARY KEY (identifier)
+);
+
 
 CREATE TABLE IF NOT EXISTS "user"
 (
