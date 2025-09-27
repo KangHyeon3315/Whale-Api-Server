@@ -58,6 +58,14 @@ dependencies {
     runtimeOnly("org.flywaydb:flyway-database-postgresql")
     implementation("org.flywaydb:flyway-core")
 
+    // JWT
+    implementation("io.jsonwebtoken:jjwt-api:0.12.6")
+    implementation("io.jsonwebtoken:jjwt-impl:0.12.6")
+    implementation("io.jsonwebtoken:jjwt-jackson:0.12.6")
+
+    // Security
+    implementation("org.springframework.boot:spring-boot-starter-security")
+
     // Kotlin
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
