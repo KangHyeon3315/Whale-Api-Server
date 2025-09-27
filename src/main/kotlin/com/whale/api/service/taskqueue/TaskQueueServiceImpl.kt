@@ -2,11 +2,12 @@ package com.whale.api.service.taskqueue
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.whale.api.model.taskqueue.TaskQueueEntity
+import com.whale.api.model.taskqueue.enums.TaskStatus
 import com.whale.api.repository.taskqueue.TaskQueueRepository
 import mu.KotlinLogging
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.util.UUID
 
 @Service
@@ -26,8 +27,8 @@ class TaskQueueServiceImpl(
                 identifier = UUID.randomUUID(),
                 type = type,
                 payload = payloadJson,
-                status = "PENDING",
-                createdAt = LocalDateTime.now(),
+                status = TaskStatus.PENDING,
+                createdAt = OffsetDateTime.now(),
                 processedAt = null,
                 errorMessage = null,
                 retryCount = 0
@@ -42,14 +43,12 @@ class TaskQueueServiceImpl(
     override fun markAsProcessing(taskId: UUID): TaskQueueEntity? {
         return writeTransactionTemplate.execute {
             val task = taskQueueRepository.findById(taskId).orElse(null)
-            if (task != null && task.status == "PENDING") {
-                val updatedTask = task.copy(
-                    status = "PROCESSING",
-                    processedAt = LocalDateTime.now()
-                )
-                taskQueueRepository.save(updatedTask)
+            if (task != null && task.status == TaskStatus.PENDING) {
+                task.status = TaskStatus.PROCESSING
+                task.processedAt = OffsetDateTime.now()
+                taskQueueRepository.save(task)
                 logger.info("Marked task as processing: $taskId")
-                updatedTask
+                task
             } else {
                 logger.warn("Task not found or not in PENDING status: $taskId")
                 null
@@ -60,15 +59,13 @@ class TaskQueueServiceImpl(
     override fun markAsCompleted(taskId: UUID): TaskQueueEntity? {
         return writeTransactionTemplate.execute {
             val task = taskQueueRepository.findById(taskId).orElse(null)
-            if (task != null && task.status == "PROCESSING") {
-                val updatedTask = task.copy(
-                    status = "COMPLETED",
-                    processedAt = LocalDateTime.now(),
-                    errorMessage = null
-                )
-                taskQueueRepository.save(updatedTask)
+            if (task != null && task.status == TaskStatus.PROCESSING) {
+                task.status = TaskStatus.COMPLETED
+                task.processedAt = OffsetDateTime.now()
+                task.errorMessage = null
+                taskQueueRepository.save(task)
                 logger.info("Marked task as completed: $taskId")
-                updatedTask
+                task
             } else {
                 logger.warn("Task not found or not in PROCESSING status: $taskId")
                 null
@@ -80,15 +77,13 @@ class TaskQueueServiceImpl(
         return writeTransactionTemplate.execute {
             val task = taskQueueRepository.findById(taskId).orElse(null)
             if (task != null) {
-                val updatedTask = task.copy(
-                    status = "FAILED",
-                    processedAt = LocalDateTime.now(),
-                    errorMessage = errorMessage,
-                    retryCount = task.retryCount + 1
-                )
-                taskQueueRepository.save(updatedTask)
+                task.status = TaskStatus.FAILED
+                task.processedAt = OffsetDateTime.now()
+                task.errorMessage = errorMessage
+                task.retryCount = task.retryCount + 1
+                taskQueueRepository.save(task)
                 logger.error("Marked task as failed: $taskId, error: $errorMessage")
-                updatedTask
+                task
             } else {
                 logger.warn("Task not found: $taskId")
                 null
@@ -104,14 +99,12 @@ class TaskQueueServiceImpl(
     override fun markAsRetry(taskId: UUID): TaskQueueEntity? {
         return writeTransactionTemplate.execute {
             val task = taskQueueRepository.findById(taskId).orElse(null)
-            if (task != null && task.status == "FAILED") {
-                val updatedTask = task.copy(
-                    status = "PENDING",
-                    errorMessage = null
-                )
-                taskQueueRepository.save(updatedTask)
+            if (task != null && task.status == TaskStatus.FAILED) {
+                task.status = TaskStatus.PENDING
+                task.errorMessage = null
+                taskQueueRepository.save(task)
                 logger.info("Marked task for retry: $taskId")
-                updatedTask
+                task
             } else {
                 logger.warn("Task not found or not in FAILED status: $taskId")
                 null
@@ -120,7 +113,7 @@ class TaskQueueServiceImpl(
     }
 
     override fun getFailedTasksForRetry(maxRetryCount: Int): List<TaskQueueEntity> {
-        val retryAfter = LocalDateTime.now().minusMinutes(5) // 5분 후 재시도
+        val retryAfter = OffsetDateTime.now().minusMinutes(5) // 5분 후 재시도
         return taskQueueRepository.findFailedTasksForRetry(maxRetryCount, retryAfter)
     }
 }

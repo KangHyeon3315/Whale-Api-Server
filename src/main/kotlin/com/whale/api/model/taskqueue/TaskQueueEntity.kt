@@ -1,10 +1,8 @@
 package com.whale.api.model.taskqueue
 
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.Id
-import jakarta.persistence.Table
-import java.time.LocalDateTime
+import com.whale.api.model.taskqueue.enums.TaskStatus
+import jakarta.persistence.*
+import java.time.OffsetDateTime
 import java.util.UUID
 
 @Entity
@@ -17,12 +15,13 @@ data class TaskQueueEntity(
     val type: String,
     @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
     val payload: String,
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    val status: String,
+    var status: TaskStatus,
     @Column(name = "created_at", nullable = false)
-    val createdAt: LocalDateTime,
+    val createdAt: OffsetDateTime,
     @Column(name = "processed_at", nullable = true)
-    var processedAt: LocalDateTime?,
+    var processedAt: OffsetDateTime?,
     @Column(name = "error_message", nullable = true, columnDefinition = "text")
     var errorMessage: String?,
     @Column(name = "retry_count", nullable = false)
