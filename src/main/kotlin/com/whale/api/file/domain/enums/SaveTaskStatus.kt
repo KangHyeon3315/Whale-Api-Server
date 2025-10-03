@@ -4,5 +4,5 @@ enum class SaveTaskStatus {
     PENDING,
     PROCESSING,
     COMPLETED,
-    FAILED
+    FAILED,
 }

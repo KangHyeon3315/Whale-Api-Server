@@ -1,4 +1,3 @@
 package com.whale.api.file.adapter.output.persistence
 
-class UnsortedFilePersistenceAdapter {
-}
+class UnsortedFilePersistenceAdapter

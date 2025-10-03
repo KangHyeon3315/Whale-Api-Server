@@ -9,6 +9,5 @@ class FileGroup(
     val type: String,
     var thumbnail: String?,
     val createdDate: OffsetDateTime,
-    var modifiedDate: OffsetDateTime?
-) {
-}
+    var modifiedDate: OffsetDateTime?,
+)

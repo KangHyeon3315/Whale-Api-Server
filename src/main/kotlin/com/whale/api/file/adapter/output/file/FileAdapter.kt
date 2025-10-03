@@ -18,27 +18,31 @@ import javax.imageio.ImageIO
 
 @Repository
 class FileAdapter(
-    private val fileProperty: FileProperty
+    private val fileProperty: FileProperty,
 ) : HashFileOutput,
     MoveFileOutput,
     CreateThumbnailOutput {
-
     private val logger = KotlinLogging.logger {}
 
-    private fun hashVideo(filePath: Path, frameRate: Int = 10, size: Pair<Int, Int> = Pair(256, 256)): String {
+    private fun hashVideo(
+        filePath: Path,
+        frameRate: Int = 10,
+        size: Pair<Int, Int> = Pair(256, 256),
+    ): String {
         return try {
             val hasher = MessageDigest.getInstance("SHA-256")
 
             // FFmpeg 명령어: 10프레임마다 샘플링, 256x256 그레이스케일로 변환
-            val processBuilder = ProcessBuilder(
-                "ffmpeg",
-                "-i", filePath.toString(),
-                "-vf", "select='not(mod(n,$frameRate))',scale=${size.first}:${size.second}",
-                "-pix_fmt", "gray",
-                "-f", "rawvideo",
-                "-vcodec", "rawvideo",
-                "-"
-            )
+            val processBuilder =
+                ProcessBuilder(
+                    "ffmpeg",
+                    "-i", filePath.toString(),
+                    "-vf", "select='not(mod(n,$frameRate))',scale=${size.first}:${size.second}",
+                    "-pix_fmt", "gray",
+                    "-f", "rawvideo",
+                    "-vcodec", "rawvideo",
+                    "-",
+                )
 
             processBuilder.redirectError(ProcessBuilder.Redirect.DISCARD) // stderr 무시
             val process = processBuilder.start()
@@ -77,7 +81,10 @@ class FileAdapter(
         }
     }
 
-    private fun hashImage(filePath: Path, size: Pair<Int, Int> = Pair(256, 256)): String {
+    private fun hashImage(
+        filePath: Path,
+        size: Pair<Int, Int> = Pair(256, 256),
+    ): String {
         val originalImage = ImageIO.read(filePath.toFile())
         val resizedImage = originalImage.getScaledInstance(size.first, size.second, Image.SCALE_SMOOTH)
 
@@ -98,17 +105,21 @@ class FileAdapter(
         return hasher.digest().joinToString("") { "%02x".format(it) }
     }
 
-    private fun generateVideoThumbnail(filePath: Path, thumbnailPath: Path) {
+    private fun generateVideoThumbnail(
+        filePath: Path,
+        thumbnailPath: Path,
+    ) {
         // FFmpeg를 사용한 비디오 썸네일 생성 (1초 지점에서 512px 너비로)
-        val processBuilder = ProcessBuilder(
-            "ffmpeg",
-            "-i", filePath.toString(),
-            "-ss", "1",
-            "-vframes", "1",
-            "-vf", "scale=512:-1",
-            "-y",
-            thumbnailPath.toString()
-        )
+        val processBuilder =
+            ProcessBuilder(
+                "ffmpeg",
+                "-i", filePath.toString(),
+                "-ss", "1",
+                "-vframes", "1",
+                "-vf", "scale=512:-1",
+                "-y",
+                thumbnailPath.toString(),
+            )
 
         val process = processBuilder.start()
         val exitCode = process.waitFor()
@@ -118,14 +129,21 @@ class FileAdapter(
         }
     }
 
-    private fun generateImageThumbnail(filePath: Path, thumbnailPath: Path) {
+    private fun generateImageThumbnail(
+        filePath: Path,
+        thumbnailPath: Path,
+    ) {
         val originalImage = ImageIO.read(filePath.toFile())
         val thumbnailImage = createThumbnail(originalImage, 512, 512)
 
         ImageIO.write(thumbnailImage, "jpg", thumbnailPath.toFile())
     }
 
-    private fun createThumbnail(originalImage: BufferedImage, width: Int, height: Int): BufferedImage {
+    private fun createThumbnail(
+        originalImage: BufferedImage,
+        width: Int,
+        height: Int,
+    ): BufferedImage {
         val scaledImage = originalImage.getScaledInstance(width, height, Image.SCALE_SMOOTH)
         val thumbnailImage = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
         val graphics = thumbnailImage.createGraphics()
@@ -134,7 +152,10 @@ class FileAdapter(
         return thumbnailImage
     }
 
-    override fun moveFile(sourcePath: String, destinationPath: String) {
+    override fun moveFile(
+        sourcePath: String,
+        destinationPath: String,
+    ) {
         val sourceFile = Paths.get(fileProperty.basePath).resolve(sourcePath)
         val destinationFile = Paths.get(fileProperty.basePath).resolve(destinationPath)
 
@@ -158,8 +179,8 @@ class FileAdapter(
         }
 
         val extension = filePath.toString().substringAfterLast('.').lowercase()
-        val isImage = extension in fileProperty.IMAGE_EXTENSIONS.map { it.removePrefix(".") }
-        val isVideo = extension in fileProperty.VIDEO_EXTENSIONS.map { it.removePrefix(".") }
+        val isImage = extension in fileProperty.imageExtensions.map { it.removePrefix(".") }
+        val isVideo = extension in fileProperty.videoExtensions.map { it.removePrefix(".") }
 
         return when {
             isImage -> hashImage(filePath)
@@ -176,14 +197,14 @@ class FileAdapter(
         }
 
         val extension = filePath.toString().substringAfterLast('.').lowercase()
-        val isImage = extension in fileProperty.IMAGE_EXTENSIONS.map { it.removePrefix(".") }
-        val isVideo = extension in fileProperty.VIDEO_EXTENSIONS.map { it.removePrefix(".") }
+        val isImage = extension in fileProperty.imageExtensions.map { it.removePrefix(".") }
+        val isVideo = extension in fileProperty.videoExtensions.map { it.removePrefix(".") }
 
         if (!isImage && !isVideo) {
             throw RuntimeException("Unsupported media type: $extension")
         }
 
-        val thumbnailRelativePath = "${fileProperty.thumbnailPath}/${path}.thumbnail.jpg"
+        val thumbnailRelativePath = "${fileProperty.thumbnailPath}/$path.thumbnail.jpg"
         val thumbnailPath = Paths.get(fileProperty.basePath).resolve(thumbnailRelativePath)
 
         // 썸네일 디렉토리 생성
@@ -209,5 +230,4 @@ class FileAdapter(
             throw RuntimeException("Failed to generate thumbnail", e)
         }
     }
-
 }

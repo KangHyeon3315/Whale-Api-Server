@@ -13,6 +13,5 @@ class File(
     var sortOrder: Int?,
     val createdDate: OffsetDateTime,
     var modifiedDate: OffsetDateTime,
-    var lastViewDate: OffsetDateTime?
-) {
-}
+    var lastViewDate: OffsetDateTime?,
+)

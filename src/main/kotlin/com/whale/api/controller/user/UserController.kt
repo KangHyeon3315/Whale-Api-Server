@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestHeader
 class UserController(
     private val loginUserUseCase: LoginUserUseCase,
 ) {
-
     @PostMapping("/login")
     fun login(
         @RequestBody request: LoginRequest,
@@ -33,5 +32,4 @@ class UserController(
             .let { RefreshResponse.of(it) }
             .let { ResponseEntity.ok(it) }
     }
-
 }

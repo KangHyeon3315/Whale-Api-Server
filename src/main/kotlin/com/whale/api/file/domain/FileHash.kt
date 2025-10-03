@@ -5,6 +5,5 @@ import java.util.UUID
 class FileHash(
     val identifier: UUID,
     val fileIdentifier: UUID,
-    val hash: String
-) {
-}
+    val hash: String,
+)

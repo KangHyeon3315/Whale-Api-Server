@@ -7,7 +7,7 @@ class FileNotFoundException(
     message: String = "File not found",
     throwable: Throwable? = null,
 ) : BusinessException(
-    HttpStatus.NOT_FOUND.value(),
-    message,
-    throwable,
-)
+        HttpStatus.NOT_FOUND.value(),
+        message,
+        throwable,
+    )

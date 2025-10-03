@@ -7,7 +7,7 @@ class UnsupportedMediaFileTypeException(
     message: String = "Unsupported media file type",
     throwable: Throwable? = null,
 ) : BusinessException(
-    HttpStatus.BAD_REQUEST.value(),
-    message,
-    throwable,
-)
+        HttpStatus.BAD_REQUEST.value(),
+        message,
+        throwable,
+    )

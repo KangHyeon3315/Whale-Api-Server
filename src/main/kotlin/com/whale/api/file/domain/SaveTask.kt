@@ -14,12 +14,11 @@ class SaveTask(
     val tags: List<Tag>,
     var status: SaveTaskStatus,
     val createdDate: OffsetDateTime,
-    var modifiedDate: OffsetDateTime
+    var modifiedDate: OffsetDateTime,
 ) {
-
     class Tag(
         val name: String,
-        val type: String
+        val type: String,
     )
 
     fun failed() {

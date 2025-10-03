@@ -7,6 +7,5 @@ class UnsortedFile(
     val path: String,
     val name: String,
     val fileHash: String?,
-    val encoding: String?
-) {
-}
+    val encoding: String?,
+)

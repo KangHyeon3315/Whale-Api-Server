@@ -5,6 +5,5 @@ import java.util.UUID
 class FileTag(
     val identifier: UUID,
     val fileIdentifier: UUID,
-    val tagIdentifier: UUID
-) {
-}
+    val tagIdentifier: UUID,
+)

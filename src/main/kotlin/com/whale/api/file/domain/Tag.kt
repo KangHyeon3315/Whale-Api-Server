@@ -5,6 +5,5 @@ import java.util.UUID
 class Tag(
     val identifier: UUID,
     val name: String,
-    val type: String
-) {
-}
+    val type: String,
+)
