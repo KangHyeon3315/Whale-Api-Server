@@ -2,9 +2,16 @@ package com.whale.api.service.file
 
 import com.whale.api.controller.file.request.*
 import com.whale.api.controller.file.response.*
+import com.whale.api.file.adapter.output.persistence.repository.FileGroupRepository
+import com.whale.api.file.adapter.output.persistence.repository.FileGroupTagRepository
+import com.whale.api.file.adapter.output.persistence.repository.FileHashRepository
+import com.whale.api.file.adapter.output.persistence.repository.FileRepository
+import com.whale.api.file.adapter.output.persistence.repository.FileTagRepository
+import com.whale.api.file.adapter.output.persistence.repository.TagRepository
+import com.whale.api.file.adapter.output.persistence.repository.UnsortedFileRepository
 import com.whale.api.global.config.MediaFileProperty
-import com.whale.api.model.file.exception.FileNotFoundException
-import com.whale.api.model.file.exception.UnsupportedMediaFileTypeException
+import com.whale.api.file.domain.exception.FileNotFoundException
+import com.whale.api.file.domain.exception.UnsupportedMediaFileTypeException
 import com.whale.api.repository.file.*
 import com.whale.api.model.taskqueue.dto.FileSaveTaskPayload
 import com.whale.api.model.taskqueue.dto.TagDto
@@ -17,8 +24,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
-import java.io.FileInputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths

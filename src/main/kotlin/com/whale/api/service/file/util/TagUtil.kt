@@ -3,9 +3,9 @@ package com.whale.api.service.file.util
 import com.whale.api.controller.file.response.TagResponse
 import com.whale.api.model.file.*
 import com.whale.api.model.taskqueue.dto.TagDto
-import com.whale.api.repository.file.FileTagRepository
-import com.whale.api.repository.file.FileGroupTagRepository
-import com.whale.api.repository.file.TagRepository
+import com.whale.api.file.adapter.output.persistence.repository.FileTagRepository
+import com.whale.api.file.adapter.output.persistence.repository.FileGroupTagRepository
+import com.whale.api.file.adapter.output.persistence.repository.TagRepository
 import org.springframework.stereotype.Component
 import java.util.*
 
@@ -15,7 +15,7 @@ class TagUtil(
     private val fileTagRepository: FileTagRepository,
     private val fileGroupTagRepository: FileGroupTagRepository
 ) {
-    
+
     fun createOrGetTag(tagDto: TagDto): TagEntity {
         return tagRepository.findByName(tagDto.name) ?: run {
             val newTag = TagEntity(
@@ -26,7 +26,7 @@ class TagUtil(
             tagRepository.save(newTag)
         }
     }
-    
+
     fun createFileTag(file: FileEntity, tag: TagEntity): FileTagEntity {
         return FileTagEntity(
             identifier = UUID.randomUUID(),
@@ -34,7 +34,7 @@ class TagUtil(
             tag = tag
         )
     }
-    
+
     fun createFileGroupTag(fileGroup: FileGroupEntity, tag: TagEntity): FileGroupTagEntity {
         return FileGroupTagEntity(
             identifier = UUID.randomUUID(),
@@ -42,7 +42,7 @@ class TagUtil(
             tag = tag
         )
     }
-    
+
     fun getFileTagResponses(fileIdentifiers: List<UUID>): Map<UUID, List<TagResponse>> {
         val fileTags = fileTagRepository.findByFileIdentifiersWithTag(fileIdentifiers)
         return fileTags.groupBy { it.file.identifier }
@@ -56,7 +56,7 @@ class TagUtil(
                 }
             }
     }
-    
+
     fun getFileGroupTagResponses(fileGroupIdentifiers: List<UUID>): Map<UUID, List<TagResponse>> {
         val fileGroupTags = fileGroupTagRepository.findByFileGroupIdentifiersWithTag(fileGroupIdentifiers)
         return fileGroupTags.groupBy { it.fileGroup.identifier }
@@ -70,7 +70,7 @@ class TagUtil(
                 }
             }
     }
-    
+
     fun updateFileTags(file: FileEntity, tagIdentifiers: List<UUID>) {
         // 기존 태그 삭제
         fileTagRepository.deleteByFileIdentifier(file.identifier)

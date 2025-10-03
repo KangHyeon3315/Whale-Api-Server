@@ -1,6 +1,12 @@
 package com.whale.api.service.worker
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.whale.api.file.adapter.output.persistence.repository.FileGroupRepository
+import com.whale.api.file.adapter.output.persistence.repository.FileHashRepository
+import com.whale.api.file.adapter.output.persistence.repository.FileRepository
+import com.whale.api.file.adapter.output.persistence.repository.FileTagRepository
+import com.whale.api.file.adapter.output.persistence.repository.TagRepository
+import com.whale.api.file.adapter.output.persistence.repository.UnsortedFileRepository
 import com.whale.api.global.config.MediaFileProperty
 import com.whale.api.model.file.*
 import com.whale.api.model.taskqueue.TaskQueueEntity
@@ -29,19 +35,19 @@ class FileSaveWorker(
     private val objectMapper: ObjectMapper,
     private val writeTransactionTemplate: TransactionTemplate,
 ) {
-    
+
     private val logger = KotlinLogging.logger {}
-    
+
     fun processFileSaveTask(task: TaskQueueEntity): Boolean {
         return try {
             logger.info("Processing file save task: ${task.identifier}")
-            
+
             val payload = objectMapper.readValue(task.payload, FileSaveTaskPayload::class.java)
-            
+
             writeTransactionTemplate.execute {
                 processFileSave(payload)
             }
-            
+
             taskQueueService.markAsCompleted(task.identifier)
             logger.info("File save task completed: ${task.identifier}")
             true
@@ -51,7 +57,7 @@ class FileSaveWorker(
             false
         }
     }
-    
+
     private fun processFileSave(payload: FileSaveTaskPayload) {
         val basePath = Paths.get(payload.basePath)
         val sourcePath = basePath.resolve(payload.path)
@@ -139,7 +145,7 @@ class FileSaveWorker(
 
         logger.info("File saved successfully: ${payload.fileIdentifier}")
     }
-    
+
     private fun calculateFileHash(filePath: java.nio.file.Path): String {
         val digest = MessageDigest.getInstance("SHA-256")
         Files.newInputStream(filePath).use { inputStream ->
