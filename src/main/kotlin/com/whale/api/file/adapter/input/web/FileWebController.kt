@@ -186,13 +186,13 @@ class FileWebController(
     }
 
     @RequireAuth
-    @GetMapping("/thumbnail")
+    @GetMapping("/unsorted/thumbnail")
     fun getThumbnail(
         @RequestParam path: String,
     ): ResponseEntity<StreamingResponseBody> {
         logger.debug("Getting thumbnail for path: $path")
 
-        val fileResource = getThumbnailUseCase.getThumbnail(path)
+        val fileResource = getThumbnailUseCase.getUnsortedThumbnail(path)
 
         val streamingResponseBody =
             StreamingResponseBody { outputStream ->

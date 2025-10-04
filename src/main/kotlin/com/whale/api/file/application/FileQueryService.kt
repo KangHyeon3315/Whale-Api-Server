@@ -59,11 +59,10 @@ class FileQueryService(
         }
     }
 
-    override fun getThumbnail(path: String): FileResource {
+    override fun getUnsortedThumbnail(path: String): FileResource {
         logger.debug("Getting thumbnail for path: $path")
 
-        val normalizedPath = path.replace(" ", "+")
-        val fullPath = Paths.get(fileProperty.basePath, normalizedPath).toString()
+        val normalizedPath = Paths.get(fileProperty.unsortedPath, path.replace(" ", "+")).toString()
 
         // 경로 검증
         validateFilePathOutput.validatePath(normalizedPath)
