@@ -46,6 +46,7 @@ class GlobalExceptionHandler {
                     path,
                     message,
                     ex.javaClass.simpleName,
+                    ex,
                 )
             }
             in 500..599 -> {
@@ -55,6 +56,7 @@ class GlobalExceptionHandler {
                     path,
                     message,
                     ex.javaClass.simpleName,
+                    ex,
                 )
             }
         }

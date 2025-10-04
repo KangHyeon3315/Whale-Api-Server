@@ -2,11 +2,15 @@ package com.whale.api.file.adapter.output.file
 
 import com.whale.api.file.application.port.out.CreateThumbnailOutput
 import com.whale.api.file.application.port.out.DeleteFileOutput
+import com.whale.api.file.application.port.out.FileInfo
 import com.whale.api.file.application.port.out.HashFileOutput
+import com.whale.api.file.application.port.out.ListDirectoryOutput
 import com.whale.api.file.application.port.out.MoveFileOutput
 import com.whale.api.file.application.port.out.ReadFileOutput
+import com.whale.api.file.application.port.out.ScanDirectoryOutput
 import com.whale.api.file.application.port.out.ValidateFilePathOutput
 import com.whale.api.file.domain.FileResource
+import com.whale.api.file.domain.FileTreeItem
 import com.whale.api.file.domain.exception.InvalidPathException
 import com.whale.api.file.domain.property.FileProperty
 import com.whale.api.global.exception.BusinessException
@@ -33,7 +37,9 @@ class FileAdapter(
     CreateThumbnailOutput,
     ValidateFilePathOutput,
     ReadFileOutput,
-    DeleteFileOutput {
+    DeleteFileOutput,
+    ScanDirectoryOutput,
+    ListDirectoryOutput {
     private val logger = KotlinLogging.logger {}
 
     private fun hashVideo(
@@ -364,5 +370,113 @@ class FileAdapter(
             logger.error("Failed to delete file: $path", e)
             throw RuntimeException("Failed to delete file: $path", e)
         }
+    }
+
+    // ScanDirectoryOutput 구현
+    override fun scanDirectory(directoryPath: String): List<FileInfo> {
+        val dirPath = Paths.get(directoryPath)
+        val basePath = Paths.get(fileProperty.basePath)
+        val fileInfoList = mutableListOf<FileInfo>()
+
+        if (!Files.exists(dirPath) || !Files.isDirectory(dirPath)) {
+            throw RuntimeException("Directory not found or not a directory: $directoryPath")
+        }
+
+        try {
+            Files.walk(dirPath)
+                .filter { Files.isRegularFile(it) }
+                .forEach { filePath ->
+                    val fileName = filePath.fileName.toString()
+                    val extension = fileName.substringAfterLast('.', "").lowercase()
+                    val relativePath = basePath.relativize(filePath).toString()
+
+                    // 지원하는 파일 확장자만 처리
+                    if (extension.isNotEmpty() &&
+                        (
+                            fileProperty.videoExtensions.contains(".$extension") ||
+                                fileProperty.imageExtensions.contains(".$extension")
+                        )
+                    ) {
+                        fileInfoList.add(
+                            FileInfo(
+                                path = filePath,
+                                relativePath = relativePath,
+                                name = fileName,
+                                extension = extension,
+                            ),
+                        )
+                    }
+                }
+        } catch (e: Exception) {
+            logger.error("Error scanning directory: $directoryPath", e)
+            throw RuntimeException("Failed to scan directory: $directoryPath", e)
+        }
+
+        return fileInfoList
+    }
+
+    override fun getVideoEncoding(filePath: String): String? {
+        // 비디오 인코딩 정보를 추출하는 로직
+        // Python 코드의 get_video_encoding_from_header 함수와 동일한 기능
+        // 실제 구현에서는 FFmpeg 라이브러리나 다른 미디어 라이브러리를 사용해야 함
+        // 여기서는 간단한 구현으로 대체
+        try {
+            val path = Paths.get(filePath)
+            if (!Files.exists(path)) {
+                return null
+            }
+
+            // 실제로는 FFmpeg나 다른 라이브러리를 사용해서 비디오 인코딩 정보를 추출해야 함
+            // 여기서는 예시로 파일 확장자 기반으로 간단히 처리
+            val extension = path.toString().substringAfterLast('.').lowercase()
+            return when (extension) {
+                "mp4" -> "h264"
+                "avi" -> "xvid"
+                "mkv" -> "h264"
+                "mov" -> "h264"
+                else -> "unknown"
+            }
+        } catch (e: Exception) {
+            logger.error("Error getting video encoding for: $filePath", e)
+            return null
+        }
+    }
+
+    // ListDirectoryOutput 구현
+    override fun listDirectory(directoryPath: String): List<FileTreeItem> {
+        val dirPath = Paths.get(directoryPath)
+        val fileTreeItems = mutableListOf<FileTreeItem>()
+
+        if (!Files.exists(dirPath) || !Files.isDirectory(dirPath)) {
+            throw RuntimeException("Directory not found or not a directory: $directoryPath")
+        }
+
+        try {
+            Files.list(dirPath).use { stream ->
+                stream.forEach { filePath ->
+                    val fileName = filePath.fileName.toString()
+                    val isDir = Files.isDirectory(filePath)
+                    val extension =
+                        if (!isDir) {
+                            fileName.substringAfterLast('.', "").lowercase()
+                        } else {
+                            ""
+                        }
+
+                    fileTreeItems.add(
+                        FileTreeItem(
+                            name = fileName,
+                            isDir = isDir,
+                            extension = extension,
+                        ),
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            logger.error("Error listing directory: $directoryPath", e)
+            throw RuntimeException("Failed to list directory: $directoryPath", e)
+        }
+
+        return fileTreeItems
     }
 }

@@ -2,11 +2,15 @@ package com.whale.api.file.adapter.input.web
 
 import com.whale.api.file.adapter.input.web.request.DeleteFileRequest
 import com.whale.api.file.adapter.input.web.request.SaveFileRequest
+import com.whale.api.file.adapter.input.web.response.FileTreeItemDto
+import com.whale.api.file.adapter.input.web.response.UnsortedTreeResponse
 import com.whale.api.file.application.port.`in`.DeleteFileUseCase
 import com.whale.api.file.application.port.`in`.GetAllTagsUseCase
 import com.whale.api.file.application.port.`in`.GetFileTypesUseCase
 import com.whale.api.file.application.port.`in`.GetFileUseCase
+import com.whale.api.file.application.port.`in`.GetUnsortedTreeUseCase
 import com.whale.api.file.application.port.`in`.SaveFileUseCase
+import com.whale.api.file.application.port.`in`.SortType
 import com.whale.api.file.domain.FileResource
 import com.whale.api.global.annotation.RequireAuth
 import jakarta.servlet.http.HttpServletRequest
@@ -32,6 +36,7 @@ class FileWebController(
     private val deleteFileUseCase: DeleteFileUseCase,
     private val getFileTypesUseCase: GetFileTypesUseCase,
     private val getAllTagsUseCase: GetAllTagsUseCase,
+    private val getUnsortedTreeUseCase: GetUnsortedTreeUseCase,
 ) {
     private val logger = KotlinLogging.logger {}
 
@@ -147,5 +152,33 @@ class FileWebController(
                 )
             }
         return ResponseEntity.ok(mapOf("tags" to tagDtos))
+    }
+
+    @RequireAuth
+    @GetMapping("/unsorted/tree")
+    fun getUnsortedTree(
+        @RequestParam(defaultValue = "") path: String,
+        @RequestParam(required = false) cursor: String?,
+        @RequestParam(defaultValue = "20") limit: Int,
+        @RequestParam(defaultValue = "name") sort: String,
+    ): ResponseEntity<UnsortedTreeResponse> {
+        val sortType =
+            when (sort.lowercase()) {
+                "number" -> SortType.NUMBER
+                else -> SortType.NAME
+            }
+
+        val fileTreeItems = getUnsortedTreeUseCase.getUnsortedTree(path, cursor, limit, sortType)
+
+        val fileTreeItemDtos =
+            fileTreeItems.map { item ->
+                FileTreeItemDto(
+                    name = item.name,
+                    isDir = item.isDir,
+                    extension = item.extension,
+                )
+            }
+
+        return ResponseEntity.ok(UnsortedTreeResponse(files = fileTreeItemDtos))
     }
 }

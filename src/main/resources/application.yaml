@@ -70,9 +70,5 @@ jwt:
   secret: ${JWT_SECRET}
 
 # Media File Setting
-media:
-  file:
-    base-path: ${MEDIA_FILE_BASE_PATH:/tmp/whale-files}
-    thumbnail-path: thumbnail
-    unsorted-path: unsorted
-    files-path: files
+file:
+  base-path: ${MEDIA_FILE_BASE_PATH}
