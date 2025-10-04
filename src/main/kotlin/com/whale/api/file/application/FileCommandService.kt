@@ -20,17 +20,20 @@ import com.whale.api.file.domain.FileTag
 import com.whale.api.file.domain.SaveTask
 import com.whale.api.file.domain.Tag
 import com.whale.api.file.domain.enums.SaveTaskStatus
+import com.whale.api.file.domain.property.FileProperty
 import com.whale.api.global.utils.Encoder.decodeBase64
 import com.whale.api.global.utils.Encoder.encodeBase64
 import jakarta.transaction.Transactional
 import mu.KotlinLogging
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
+import java.nio.file.Paths
 import java.time.OffsetDateTime
 import java.util.UUID
 
 @Service
 class FileCommandService(
+    private val fileProperty: FileProperty,
     private val findTagOutput: FindTagOutput,
     private val findFileHashOutput: FindFileHashOutput,
     private val findSaveTaskOutput: FindSaveTaskOutput,
@@ -119,10 +122,20 @@ class FileCommandService(
     }
 
     private fun save(task: SaveTask) {
-        val fileHashValue =
-            hashFileOutput.calculateFileHash(
-                decodeBase64(task.path),
-            )
+        val decodedPath = Paths.get(fileProperty.unsortedPath, decodeBase64(task.path)).toString()
+
+        val fileHashValue = hashFileOutput.calculateFileHash(decodedPath)
+
+        /*
+         * extension = str(path.split('.')[-1]).lower()
+         *         new_path = os.path.join("files", "non_group", f"{identifier}.{extension}")
+         *         new_full_path = os.path.join(base_path, new_path)
+         *         encoded_new_path = encode_base64(new_path)
+         */
+
+        val identifier = UUID.randomUUID()
+        val extension = decodedPath.substringAfterLast('.').lowercase()
+        val newRelativePath = "${fileProperty.filesPath}/non_group/${UUID.randomUUID()}.${extension}"
 
         val file =
             writeTransactionTemplate.execute {
@@ -133,11 +146,11 @@ class FileCommandService(
                 val now = OffsetDateTime.now()
                 val file =
                     File(
-                        identifier = UUID.randomUUID(),
+                        identifier = identifier,
                         fileGroupIdentifier = task.fileGroupIdentifier,
                         name = task.name,
                         type = task.type,
-                        path = task.path,
+                        path = encodeBase64(newRelativePath),
                         thumbnail =
                             createThumbnailOutput.createThumbnail(
                                 decodeBase64(task.path),
@@ -192,8 +205,8 @@ class FileCommandService(
             }!!
 
         moveFileOutput.moveFile(
-            sourcePath = decodeBase64(task.path),
-            destinationPath = decodeBase64(file.path),
+            sourcePath = decodedPath,
+            destinationPath = newRelativePath,
         )
     }
 }

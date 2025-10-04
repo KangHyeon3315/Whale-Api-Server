@@ -444,7 +444,7 @@ class FileAdapter(
 
     // ListDirectoryOutput 구현
     override fun listDirectory(directoryPath: String): List<FileTreeItem> {
-        val dirPath = Paths.get(directoryPath)
+        val dirPath = Paths.get(fileProperty.basePath, directoryPath)
         val fileTreeItems = mutableListOf<FileTreeItem>()
 
         if (!Files.exists(dirPath) || !Files.isDirectory(dirPath)) {

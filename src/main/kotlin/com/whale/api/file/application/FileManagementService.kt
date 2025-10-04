@@ -27,13 +27,13 @@ class FileManagementService(
     GetAllTagsUseCase {
     private val logger = KotlinLogging.logger {}
 
-    override fun deleteFileByPath(path: String) {
+    override fun deleteUnsortedFileByPath(path: String) {
         // Python 코드와 동일하게 base_path와 path를 조합
-        val fullPath = Paths.get(fileProperty.basePath, path).toString()
+        val fullPath = Paths.get(fileProperty.basePath, fileProperty.unsortedPath, path).toString()
         logger.info("delete by file_path: $fullPath")
 
         // 경로 검증
-        validateFilePathOutput.validatePath(path)
+        validateFilePathOutput.validatePath(Paths.get(fileProperty.unsortedPath, path).toString())
 
         // 파일인지 확인 (Python 코드의 os.path.isfile 체크)
         val filePath = Paths.get(fullPath)

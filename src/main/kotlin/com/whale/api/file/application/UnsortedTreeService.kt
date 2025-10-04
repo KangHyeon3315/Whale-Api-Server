@@ -31,15 +31,12 @@ class UnsortedTreeService(
 
         logger.debug("get_unsorted_tree path: $normalizedPath, cursor: $cursor, limit: $limit")
 
-        val filePath = Paths.get(fileProperty.basePath, normalizedPath).toString()
+        val filePath = Paths.get(fileProperty.unsortedPath, normalizedPath).toString()
+
+        logger.debug("get_unsorted_tree filePath: $filePath")
 
         // 경로 검증
-        validateFilePathOutput.validatePath(normalizedPath)
-
-        val fullPath = Paths.get(filePath)
-        if (!Files.exists(fullPath) || !Files.isDirectory(fullPath)) {
-            throw InvalidPathException()
-        }
+        validateFilePathOutput.validatePath(filePath)
 
         // 디렉토리 리스팅
         var fileDetails = listDirectoryOutput.listDirectory(filePath)

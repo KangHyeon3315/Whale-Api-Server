@@ -13,6 +13,7 @@ import com.whale.api.file.application.port.`in`.SaveFileUseCase
 import com.whale.api.file.application.port.`in`.SortType
 import com.whale.api.file.domain.FileResource
 import com.whale.api.global.annotation.RequireAuth
+import com.whale.api.global.utils.Encoder.decodeBase64
 import jakarta.servlet.http.HttpServletRequest
 import mu.KotlinLogging
 import org.springframework.http.HttpHeaders
@@ -50,11 +51,11 @@ class FileWebController(
     }
 
     @RequireAuth
-    @GetMapping("/image")
+    @GetMapping("/unsorted/image")
     fun getImage(
         @RequestParam path: String,
     ): ResponseEntity<StreamingResponseBody> {
-        val fileResource = getFileUseCase.getImage(path)
+        val fileResource = getFileUseCase.getUnsortedImage(path)
 
         val streamingResponseBody =
             StreamingResponseBody { outputStream ->
@@ -69,7 +70,7 @@ class FileWebController(
             .body(streamingResponseBody)
     }
 
-    @GetMapping("/video")
+    @GetMapping("/unsorted/video")
     fun getVideo(
         @RequestParam path: String,
         request: HttpServletRequest,
@@ -124,11 +125,11 @@ class FileWebController(
     }
 
     @RequireAuth
-    @DeleteMapping("")
+    @DeleteMapping("/unsorted")
     fun deleteFileByPath(
         @RequestBody request: DeleteFileRequest,
     ): ResponseEntity<String> {
-        deleteFileUseCase.deleteFileByPath(request.path)
+        deleteFileUseCase.deleteUnsortedFileByPath(request.path)
         return ResponseEntity.ok("OK")
     }
 
@@ -136,7 +137,7 @@ class FileWebController(
     @GetMapping("/types")
     fun findAllTypes(): ResponseEntity<Map<String, List<String>>> {
         val types = getFileTypesUseCase.getAllFileTypes()
-        return ResponseEntity.ok(mapOf("types" to types))
+        return ResponseEntity.ok(mapOf("types" to types.map { decodeBase64(it) }))
     }
 
     @RequireAuth
@@ -147,8 +148,8 @@ class FileWebController(
             tags.map { tag ->
                 mapOf(
                     "identifier" to tag.identifier.toString(),
-                    "name" to tag.name,
-                    "type" to tag.type,
+                    "name" to decodeBase64(tag.name),
+                    "type" to decodeBase64(tag.type),
                 )
             }
         return ResponseEntity.ok(mapOf("tags" to tagDtos))

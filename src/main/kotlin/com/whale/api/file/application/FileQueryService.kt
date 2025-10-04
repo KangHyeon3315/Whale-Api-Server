@@ -5,21 +5,24 @@ import com.whale.api.file.application.port.out.ReadFileOutput
 import com.whale.api.file.application.port.out.ValidateFilePathOutput
 import com.whale.api.file.domain.FileResource
 import com.whale.api.file.domain.exception.UnsupportedMediaFileTypeException
+import com.whale.api.file.domain.property.FileProperty
 import mu.KotlinLogging
+import org.aspectj.util.FileUtil.normalizedPath
 import org.springframework.stereotype.Service
+import java.nio.file.Paths
 
 @Service
 class FileQueryService(
     private val validateFilePathOutput: ValidateFilePathOutput,
     private val readFileOutput: ReadFileOutput,
+    private val fileProperty: FileProperty,
 ) : GetFileUseCase {
     private val logger = KotlinLogging.logger {}
 
-    override fun getImage(path: String): FileResource {
+    override fun getUnsortedImage(path: String): FileResource {
         logger.debug("Getting image: $path")
 
-        val normalizedPath = path.replace(" ", "+")
-
+        val normalizedPath = Paths.get(fileProperty.unsortedPath, path.replace(" ", "+")).toString()
         validateFilePathOutput.validatePath(normalizedPath)
 
         if (!validateFilePathOutput.isImageFile(normalizedPath)) {
@@ -35,7 +38,7 @@ class FileQueryService(
     ): FileResource {
         logger.debug("Getting video: $path, rangeHeader: $rangeHeader")
 
-        val normalizedPath = path.replace(" ", "+")
+        val normalizedPath = Paths.get(fileProperty.unsortedPath, path.replace(" ", "+")).toString()
 
         validateFilePathOutput.validatePath(normalizedPath)
 
