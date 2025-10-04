@@ -103,9 +103,9 @@ class FileCommandService(
             } ?: return
 
         try {
-            writeTransactionTemplate.execute {
-                save(task)
+            save(task)
 
+            writeTransactionTemplate.execute {
                 task.complete()
                 saveSaveTaskOutput.save(task)
             }
