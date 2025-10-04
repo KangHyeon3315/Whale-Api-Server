@@ -4,4 +4,9 @@ import com.whale.api.file.adapter.output.persistence.entity.TagEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import java.util.UUID
 
-interface TagRepository : JpaRepository<TagEntity, UUID>
+interface TagRepository : JpaRepository<TagEntity, UUID> {
+    fun findAllByNameInAndTypeIn(
+        names: List<String>,
+        types: List<String>,
+    ): List<TagEntity>
+}

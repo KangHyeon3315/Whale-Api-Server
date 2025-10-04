@@ -1,10 +1,9 @@
 package com.whale.api.file.adapter.output.persistence.entity
 
+import com.whale.api.file.domain.FileTag
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
-import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import java.util.UUID
 
@@ -14,10 +13,26 @@ data class FileTagEntity(
     @Id
     @Column(name = "identifier", nullable = false)
     val identifier: UUID,
-    @ManyToOne
-    @JoinColumn(name = "file_identifier", nullable = false)
-    val file: FileEntity,
-    @ManyToOne
-    @JoinColumn(name = "tag_identifier", nullable = false)
-    val tag: TagEntity,
-)
+    @Column(name = "file_identifier", nullable = false)
+    val fileIdentifier: UUID,
+    @Column(name = "tag_identifier", nullable = false)
+    val tagIdentifier: UUID,
+) {
+    fun toDomain(): FileTag {
+        return FileTag(
+            identifier = this.identifier,
+            fileIdentifier = this.fileIdentifier,
+            tagIdentifier = this.tagIdentifier,
+        )
+    }
+
+    companion object {
+        fun FileTag.toEntity(): FileTagEntity {
+            return FileTagEntity(
+                identifier = this.identifier,
+                fileIdentifier = this.fileIdentifier,
+                tagIdentifier = this.tagIdentifier,
+            )
+        }
+    }
+}
