@@ -3,6 +3,14 @@
 ## Overview
 Whale API Server의 파일 관리 관련 API 문서입니다.
 
+### 주요 기능
+- 파일 저장 및 관리 (이미지, 비디오)
+- 자동 썸네일 생성 및 캐싱
+- 태그 기반 파일 분류
+- HTTP Range 헤더를 통한 비디오 스트리밍
+- 디렉토리 구조 탐색
+- 파일 타입별 필터링
+
 ## Authentication
 모든 API는 JWT 인증이 필요합니다. 요청 헤더에 `Authorization: Bearer <token>`을 포함해야 합니다.
 
@@ -223,7 +231,60 @@ curl -X GET http://localhost:8080/files/tags \
 
 ---
 
-### 6. 정리되지 않은 파일 트리 조회
+### 6. 썸네일 조회
+
+**GET** `/files/thumbnail`
+
+파일의 썸네일을 조회합니다. 썸네일이 없으면 자동으로 생성합니다.
+
+#### Request Parameters
+| 프로퍼티 이름 | 타입 | Nullable | 설명 |
+|-------------|------|----------|------|
+| path | String | No | 썸네일을 조회할 파일의 경로 |
+
+#### Response
+썸네일 이미지 데이터를 JPEG 형식으로 스트리밍 반환합니다.
+
+#### Request Example
+```bash
+# 이미지 파일 썸네일 조회
+curl -X GET "http://localhost:8080/files/thumbnail?path=images/photo.jpg" \
+  -H "Authorization: Bearer <token>" \
+  --output photo_thumbnail.jpg
+
+# 비디오 파일 썸네일 조회
+curl -X GET "http://localhost:8080/files/thumbnail?path=videos/movie.mp4" \
+  -H "Authorization: Bearer <token>" \
+  --output movie_thumbnail.jpg
+
+# 공백이 포함된 경로
+curl -X GET "http://localhost:8080/files/thumbnail?path=my%20photos/vacation.jpg" \
+  -H "Authorization: Bearer <token>" \
+  --output vacation_thumbnail.jpg
+```
+
+#### Response Status
+- **200 OK**: 썸네일 조회 성공
+- **400 Bad Request**: 잘못된 경로 또는 지원하지 않는 파일 형식
+- **404 Not Found**: 원본 파일을 찾을 수 없음
+
+#### Response Headers
+- `Content-Type: image/jpeg`
+- `Content-Length: <파일크기>`
+- `Cache-Control: public, max-age=3600` (1시간 캐시)
+
+#### 특징
+- 이미지와 비디오 파일을 지원합니다
+- 썸네일 크기는 512x512 픽셀로 생성됩니다
+- 이미지: 비율을 유지하며 리사이즈
+- 비디오: 1초 지점에서 프레임 추출
+- 썸네일이 이미 존재하면 기존 파일을 반환합니다
+- 생성된 썸네일은 서버에 캐시되어 재사용됩니다
+- HTTP 캐시 헤더를 통해 클라이언트 캐싱을 지원합니다
+
+---
+
+### 7. 정리되지 않은 파일 트리 조회
 
 **GET** `/files/unsorted/tree`
 
@@ -306,6 +367,33 @@ curl -X GET "http://localhost:8080/files/unsorted/tree?cursor=photo010.jpg&limit
 ### SortType
 - `name`: 이름순 정렬
 - `number`: 숫자순 정렬 (파일명에서 숫자를 추출하여 정렬)
+
+### 지원되는 파일 형식
+
+#### 이미지 파일
+- `.jpg`, `.jpeg` - JPEG 이미지
+- `.png` - PNG 이미지
+- `.gif` - GIF 이미지
+- `.bmp` - BMP 이미지
+- `.webp` - WebP 이미지
+- `.tiff` - TIFF 이미지
+- `.svg` - SVG 벡터 이미지
+
+#### 비디오 파일
+- `.mp4` - MP4 비디오
+- `.avi` - AVI 비디오
+- `.mkv` - Matroska 비디오
+- `.mov` - QuickTime 비디오
+- `.wmv` - Windows Media 비디오
+- `.flv` - Flash 비디오
+- `.webm` - WebM 비디오
+- `.m4v` - iTunes 비디오
+
+#### 썸네일 생성 규칙
+- **이미지**: 원본 비율을 유지하며 512x512 픽셀 내로 리사이즈
+- **비디오**: 1초 지점에서 프레임을 추출하여 512픽셀 너비로 생성
+- **형식**: 모든 썸네일은 JPEG 형식으로 저장
+- **저장 위치**: `{basePath}/thumbnail/{originalPath}.thumbnail.jpg`
 
 ---
 
@@ -406,4 +494,29 @@ curl -X GET "http://localhost:8080/files?path=videos/movie.mp4" \
 curl -X GET "http://localhost:8080/files?path=videos/movie.mp4" \
   -H "Authorization: Bearer <token>" \
   --output movie_full.mp4
+```
+
+### 5. 썸네일 활용
+```bash
+# 1. 이미지 썸네일 생성 및 조회
+curl -X GET "http://localhost:8080/files/thumbnail?path=photos/2024/vacation/beach.jpg" \
+  -H "Authorization: Bearer <token>" \
+  --output beach_thumbnail.jpg
+
+# 2. 비디오 썸네일 생성 및 조회
+curl -X GET "http://localhost:8080/files/thumbnail?path=videos/family_trip.mp4" \
+  -H "Authorization: Bearer <token>" \
+  --output family_trip_thumbnail.jpg
+
+# 3. 갤러리 뷰를 위한 여러 썸네일 조회
+for file in photo001.jpg photo002.jpg photo003.jpg; do
+  curl -X GET "http://localhost:8080/files/thumbnail?path=gallery/$file" \
+    -H "Authorization: Bearer <token>" \
+    --output "thumbnails/${file%.*}_thumb.jpg"
+done
+
+# 4. 웹 브라우저에서 썸네일 표시 (HTML 예시)
+# <img src="http://localhost:8080/files/thumbnail?path=photos/image.jpg"
+#      alt="Thumbnail"
+#      style="width: 150px; height: 150px; object-fit: cover;">
 ```

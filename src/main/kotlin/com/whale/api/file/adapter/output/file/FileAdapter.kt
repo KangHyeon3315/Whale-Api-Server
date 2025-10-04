@@ -3,6 +3,7 @@ package com.whale.api.file.adapter.output.file
 import com.whale.api.file.application.port.out.CreateThumbnailOutput
 import com.whale.api.file.application.port.out.DeleteFileOutput
 import com.whale.api.file.application.port.out.FileInfo
+import com.whale.api.file.application.port.out.GetThumbnailOutput
 import com.whale.api.file.application.port.out.HashFileOutput
 import com.whale.api.file.application.port.out.ListDirectoryOutput
 import com.whale.api.file.application.port.out.MoveFileOutput
@@ -14,6 +15,7 @@ import com.whale.api.file.domain.FileTreeItem
 import com.whale.api.file.domain.exception.InvalidPathException
 import com.whale.api.file.domain.property.FileProperty
 import com.whale.api.global.exception.BusinessException
+import com.whale.api.global.utils.Encoder.decodeBase64
 import com.whale.api.global.utils.Encoder.encodeBase64
 import mu.KotlinLogging
 import org.springframework.http.HttpStatus
@@ -35,6 +37,7 @@ class FileAdapter(
 ) : HashFileOutput,
     MoveFileOutput,
     CreateThumbnailOutput,
+    GetThumbnailOutput,
     ValidateFilePathOutput,
     ReadFileOutput,
     DeleteFileOutput,
@@ -478,5 +481,25 @@ class FileAdapter(
         }
 
         return fileTreeItems
+    }
+
+    // GetThumbnailOutput 구현
+    override fun getThumbnail(thumbnailPath: String): FileResource {
+        val decodedPath = decodeBase64(thumbnailPath)
+        val fullPath = Paths.get(fileProperty.basePath, decodedPath)
+
+        if (!Files.exists(fullPath)) {
+            throw RuntimeException("Thumbnail not found: $decodedPath")
+        }
+
+        val mimeType = "image/jpeg"
+        val fileSize = Files.size(fullPath)
+
+        return FileResource(
+            path = decodedPath,
+            mimeType = mimeType,
+            size = fileSize,
+            inputStream = FileInputStream(fullPath.toFile()),
+        )
     }
 }

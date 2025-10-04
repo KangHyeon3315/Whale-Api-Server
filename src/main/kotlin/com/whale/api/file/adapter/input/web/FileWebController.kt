@@ -8,6 +8,7 @@ import com.whale.api.file.application.port.`in`.DeleteFileUseCase
 import com.whale.api.file.application.port.`in`.GetAllTagsUseCase
 import com.whale.api.file.application.port.`in`.GetFileTypesUseCase
 import com.whale.api.file.application.port.`in`.GetFileUseCase
+import com.whale.api.file.application.port.`in`.GetThumbnailUseCase
 import com.whale.api.file.application.port.`in`.GetUnsortedTreeUseCase
 import com.whale.api.file.application.port.`in`.SaveFileUseCase
 import com.whale.api.file.application.port.`in`.SortType
@@ -34,6 +35,7 @@ import java.io.OutputStream
 class FileWebController(
     private val saveFileUseCase: SaveFileUseCase,
     private val getFileUseCase: GetFileUseCase,
+    private val getThumbnailUseCase: GetThumbnailUseCase,
     private val deleteFileUseCase: DeleteFileUseCase,
     private val getFileTypesUseCase: GetFileTypesUseCase,
     private val getAllTagsUseCase: GetAllTagsUseCase,
@@ -181,5 +183,28 @@ class FileWebController(
             }
 
         return ResponseEntity.ok(UnsortedTreeResponse(files = fileTreeItemDtos))
+    }
+
+    @RequireAuth
+    @GetMapping("/thumbnail")
+    fun getThumbnail(
+        @RequestParam path: String,
+    ): ResponseEntity<StreamingResponseBody> {
+        logger.debug("Getting thumbnail for path: $path")
+
+        val fileResource = getThumbnailUseCase.getThumbnail(path)
+
+        val streamingResponseBody =
+            StreamingResponseBody { outputStream ->
+                fileResource.inputStream.use { inputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_TYPE, fileResource.mimeType)
+            .header(HttpHeaders.CONTENT_LENGTH, fileResource.size.toString())
+            .header(HttpHeaders.CACHE_CONTROL, "public, max-age=3600") // 1시간 캐시
+            .body(streamingResponseBody)
     }
 }
