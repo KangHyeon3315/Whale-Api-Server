@@ -6,4 +6,5 @@ import java.util.UUID
 
 interface FileHashRepository : JpaRepository<FileHashEntity, UUID> {
     fun existsByHash(hash: String): Boolean
+    fun deleteByFileIdentifier(fileIdentifier: UUID)
 }

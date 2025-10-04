@@ -3,6 +3,10 @@ package com.whale.api.file.application
 import com.whale.api.file.application.port.`in`.SaveFileUseCase
 import com.whale.api.file.application.port.`in`.command.SaveFileCommand
 import com.whale.api.file.application.port.out.CreateThumbnailOutput
+import com.whale.api.file.application.port.out.DeleteFileEntityOutput
+import com.whale.api.file.application.port.out.DeleteFileHashOutput
+import com.whale.api.file.application.port.out.DeleteFileTagOutput
+import com.whale.api.file.application.port.out.DeleteTagOutput
 import com.whale.api.file.application.port.out.DeleteUnsortedFileOutput
 import com.whale.api.file.application.port.out.FindFileHashOutput
 import com.whale.api.file.application.port.out.FindSaveTaskOutput
@@ -44,6 +48,10 @@ class FileCommandService(
     private val saveFileHashOutput: SaveFileHashOutput,
     private val moveFileOutput: MoveFileOutput,
     private val deleteUnsortedFileOutput: DeleteUnsortedFileOutput,
+    private val deleteFileEntityOutput: DeleteFileEntityOutput,
+    private val deleteFileHashOutput: DeleteFileHashOutput,
+    private val deleteFileTagOutput: DeleteFileTagOutput,
+    private val deleteTagOutput: DeleteTagOutput,
     private val hashFileOutput: HashFileOutput,
     private val createThumbnailOutput: CreateThumbnailOutput,
     private val writeTransactionTemplate: TransactionTemplate,
@@ -130,7 +138,7 @@ class FileCommandService(
         val extension = decodedPath.substringAfterLast('.').lowercase()
         val newRelativePath = "${fileProperty.filesPath}/non_group/${UUID.randomUUID()}.$extension"
 
-        val file =
+        val saveResult =
             writeTransactionTemplate.execute {
                 if (findFileHashOutput.existByHash(fileHashValue)) {
                     throw RuntimeException("File already exists with hash: $fileHashValue")
@@ -194,12 +202,36 @@ class FileCommandService(
                 saveTagOutput.saveAll(newTags)
                 saveFileTagOutput.saveAll(fileTags)
                 saveFileHashOutput.save(fileHash)
-                file
+
+                // 보상 트랜잭션을 위한 정보 반환
+                Triple(file, newTags, fileHash)
             }!!
 
-        moveFileOutput.moveFile(
-            sourcePath = decodedPath,
-            destinationPath = newRelativePath,
-        )
+        val (file, newTags, fileHash) = saveResult
+
+        try {
+            moveFileOutput.moveFile(
+                sourcePath = decodedPath,
+                destinationPath = newRelativePath,
+            )
+        } catch (e: Exception) {
+            logger.error("Failed to move file from {} to {}, performing compensation transaction", decodedPath, newRelativePath, e)
+
+            // 보상 트랜잭션 실행 - 저장된 데이터들을 역순으로 삭제
+            writeTransactionTemplate.execute {
+                try {
+                    deleteFileHashOutput.deleteByFileIdentifier(file.identifier)
+                    deleteFileTagOutput.deleteByFileIdentifier(file.identifier)
+                    deleteTagOutput.deleteByIdentifiers(newTags.map { it.identifier })
+                    deleteFileEntityOutput.deleteByIdentifier(file.identifier)
+                    logger.info("Compensation transaction completed successfully for file: {}", file.identifier)
+                } catch (compensationException: Exception) {
+                    logger.error("Failed to execute compensation transaction for file: {}", file.identifier, compensationException)
+                    throw RuntimeException("File move failed and compensation transaction also failed", compensationException)
+                }
+            }
+
+            throw RuntimeException("Failed to move file: ${e.message}", e)
+        }
     }
 }
