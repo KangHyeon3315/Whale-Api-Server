@@ -1,22 +1,23 @@
-package com.whale.api.service.user
+package com.whale.api.user.application
 
 import com.whale.api.global.jwt.JwtCrypter
 import com.whale.api.global.jwt.enums.AuthRole
 import com.whale.api.global.jwt.enums.TokenType
 import com.whale.api.global.jwt.exceptions.UnauthorizedException
 import com.whale.api.global.jwt.model.Token
-import com.whale.api.model.user.UserEntity
-import com.whale.api.model.user.dto.LoginResultDto
-import com.whale.api.model.user.exception.InvalidAccountException
-import com.whale.api.repository.user.UserRepository
+import com.whale.api.user.application.port.`in`.LoginUserUseCase
+import com.whale.api.user.application.port.out.FindUserOutput
+import com.whale.api.user.domain.User
+import com.whale.api.user.domain.dto.LoginResultDto
+import com.whale.api.user.domain.exception.InvalidAccountException
 import mu.KotlinLogging
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
 
 @Service
-class UserServiceImpl(
+class UserService(
     private val crypter: JwtCrypter,
-    private val userRepository: UserRepository,
+    private val findUserOutput: FindUserOutput,
     private val writeTransactionTemplate: TransactionTemplate,
 ) : LoginUserUseCase {
     private val logger = KotlinLogging.logger {}
@@ -29,7 +30,7 @@ class UserServiceImpl(
 
         val (user, validationResult) =
             writeTransactionTemplate.execute {
-                val user = userRepository.findByUsername(username)
+                val user = findUserOutput.findByUsername(username)
 
                 if (user == null) {
                     logger.info("Invalid account: $username")
@@ -66,7 +67,7 @@ class UserServiceImpl(
     }
 
     private fun validateUser(
-        user: UserEntity,
+        user: User,
         password: String,
     ): Boolean {
         if (!user.validatePassword(password)) {

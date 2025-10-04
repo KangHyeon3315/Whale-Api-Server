@@ -1,4 +1,4 @@
-package com.whale.api.model.user.exception
+package com.whale.api.user.domain.exception
 
 import com.whale.api.global.exception.BusinessException
 import org.springframework.http.HttpStatus

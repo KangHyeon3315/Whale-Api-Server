@@ -1,7 +1,7 @@
-package com.whale.api.controller.user.response
+package com.whale.api.user.adapter.`in`.web.response
 
 import com.whale.api.global.jwt.enums.AuthRole
-import com.whale.api.model.user.dto.LoginResultDto
+import com.whale.api.user.domain.dto.LoginResultDto
 import java.time.OffsetDateTime
 import java.util.UUID
 

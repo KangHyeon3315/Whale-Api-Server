@@ -126,13 +126,6 @@ class FileCommandService(
 
         val fileHashValue = hashFileOutput.calculateFileHash(decodedPath)
 
-        /*
-         * extension = str(path.split('.')[-1]).lower()
-         *         new_path = os.path.join("files", "non_group", f"{identifier}.{extension}")
-         *         new_full_path = os.path.join(base_path, new_path)
-         *         encoded_new_path = encode_base64(new_path)
-         */
-
         val identifier = UUID.randomUUID()
         val extension = decodedPath.substringAfterLast('.').lowercase()
         val newRelativePath = "${fileProperty.filesPath}/non_group/${UUID.randomUUID()}.$extension"
@@ -153,7 +146,7 @@ class FileCommandService(
                         path = encodeBase64(newRelativePath),
                         thumbnail =
                             createThumbnailOutput.createThumbnail(
-                                decodeBase64(task.path),
+                                decodedPath,
                             ),
                         sortOrder = task.sortOrder,
                         createdDate = now,

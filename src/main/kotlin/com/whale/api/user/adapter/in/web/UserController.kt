@@ -1,11 +1,11 @@
-package com.whale.api.controller.user
+package com.whale.api.user.adapter.`in`.web
 
 import com.tradepilot.userservice.user.adapter.input.web.response.RefreshResponse
-import com.whale.api.controller.user.request.LoginRequest
-import com.whale.api.controller.user.response.LoginResponse
 import com.whale.api.global.annotation.WebController
-import com.whale.api.global.constants.AuthConstants.BEARER_WITH_SPACE
-import com.whale.api.service.user.LoginUserUseCase
+import com.whale.api.global.constants.AuthConstants
+import com.whale.api.user.adapter.`in`.web.request.LoginRequest
+import com.whale.api.user.adapter.`in`.web.response.LoginResponse
+import com.whale.api.user.application.port.`in`.LoginUserUseCase
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -20,7 +20,7 @@ class UserController(
         @RequestBody request: LoginRequest,
     ): ResponseEntity<LoginResponse> {
         return loginUserUseCase.login(request.username, request.password)
-            .let { LoginResponse.of(it) }
+            .let { LoginResponse.Companion.of(it) }
             .let { ResponseEntity.ok(it) }
     }
 
@@ -28,8 +28,8 @@ class UserController(
     fun refresh(
         @RequestHeader("Authorization") refreshToken: String,
     ): ResponseEntity<RefreshResponse> {
-        return loginUserUseCase.refresh(refreshToken.removePrefix(BEARER_WITH_SPACE))
-            .let { RefreshResponse.of(it) }
+        return loginUserUseCase.refresh(refreshToken.removePrefix(AuthConstants.BEARER_WITH_SPACE))
+            .let { RefreshResponse.Companion.of(it) }
             .let { ResponseEntity.ok(it) }
     }
 }

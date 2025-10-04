@@ -1,6 +1,5 @@
-package com.whale.api.repository.user
+package com.whale.api.user.adapter.out.persistence
 
-import com.whale.api.model.user.UserEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import java.util.UUID
 

@@ -1,7 +1,7 @@
-package com.whale.api.service.user
+package com.whale.api.user.application.port.`in`
 
 import com.whale.api.global.jwt.model.Token
-import com.whale.api.model.user.dto.LoginResultDto
+import com.whale.api.user.domain.dto.LoginResultDto
 
 interface LoginUserUseCase {
     fun login(
