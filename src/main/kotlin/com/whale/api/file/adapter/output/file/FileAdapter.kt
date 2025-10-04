@@ -1,19 +1,28 @@
 package com.whale.api.file.adapter.output.file
 
 import com.whale.api.file.application.port.out.CreateThumbnailOutput
+import com.whale.api.file.application.port.out.DeleteFileOutput
 import com.whale.api.file.application.port.out.HashFileOutput
 import com.whale.api.file.application.port.out.MoveFileOutput
+import com.whale.api.file.application.port.out.ReadFileOutput
+import com.whale.api.file.application.port.out.ValidateFilePathOutput
+import com.whale.api.file.domain.FileResource
+import com.whale.api.file.domain.exception.InvalidPathException
 import com.whale.api.file.domain.property.FileProperty
+import com.whale.api.global.exception.BusinessException
 import com.whale.api.global.utils.Encoder.encodeBase64
 import mu.KotlinLogging
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Repository
 import java.awt.Image
 import java.awt.image.BufferedImage
+import java.io.FileInputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
+import java.util.regex.Pattern
 import javax.imageio.ImageIO
 
 @Repository
@@ -21,7 +30,10 @@ class FileAdapter(
     private val fileProperty: FileProperty,
 ) : HashFileOutput,
     MoveFileOutput,
-    CreateThumbnailOutput {
+    CreateThumbnailOutput,
+    ValidateFilePathOutput,
+    ReadFileOutput,
+    DeleteFileOutput {
     private val logger = KotlinLogging.logger {}
 
     private fun hashVideo(
@@ -228,6 +240,129 @@ class FileAdapter(
         } catch (e: Exception) {
             logger.error("Error generating thumbnail: ${e.message}", e)
             throw RuntimeException("Failed to generate thumbnail", e)
+        }
+    }
+
+    // ValidateFilePathOutput 구현
+    override fun validatePath(path: String) {
+        // Path traversal 체크
+        if (".." in path) {
+            throw InvalidPathException()
+        }
+
+        val fullPath = Paths.get(fileProperty.basePath, path)
+        if (!Files.exists(fullPath)) {
+            throw InvalidPathException()
+        }
+    }
+
+    override fun isImageFile(path: String): Boolean {
+        val extension = Paths.get(path).toFile().extension.lowercase()
+        return fileProperty.imageExtensions.contains(".$extension")
+    }
+
+    override fun isVideoFile(path: String): Boolean {
+        val extension = Paths.get(path).toFile().extension.lowercase()
+        return fileProperty.videoExtensions.contains(".$extension")
+    }
+
+    // ReadFileOutput 구현
+    override fun readFile(path: String): FileResource {
+        val file = Paths.get(fileProperty.basePath, path).toFile()
+        val extension = file.extension.lowercase()
+        val mimeType = fileProperty.mimeTypeMapping[".$extension"] ?: "application/octet-stream"
+
+        return FileResource(
+            path = path,
+            mimeType = mimeType,
+            size = file.length(),
+            inputStream = FileInputStream(file),
+        )
+    }
+
+    override fun readFileWithRange(
+        path: String,
+        rangeHeader: String,
+    ): FileResource {
+        val file = Paths.get(fileProperty.basePath, path).toFile()
+        val extension = file.extension.lowercase()
+        val mimeType = fileProperty.mimeTypeMapping[".$extension"] ?: "application/octet-stream"
+        val fileSize = file.length()
+
+        val rangePattern = Pattern.compile("bytes=(\\d+)-(\\d*)")
+        val matcher = rangePattern.matcher(rangeHeader)
+
+        if (!matcher.matches()) {
+            throw BusinessException(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE.value(), "Invalid Range header")
+        }
+
+        val start = matcher.group(1).toLong()
+        val endGroup = matcher.group(2)
+        val end = if (endGroup.isNotEmpty()) endGroup.toLong() else fileSize - 1
+
+        if (start >= fileSize || end >= fileSize) {
+            throw BusinessException(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE.value(), "Requested Range Not Satisfiable")
+        }
+
+        // Range 요청을 위한 특별한 InputStream 생성
+        val inputStream =
+            object : FileInputStream(file) {
+                private var skipped = false
+
+                override fun read(): Int {
+                    if (!skipped) {
+                        skip(start)
+                        skipped = true
+                    }
+                    return super.read()
+                }
+
+                override fun read(b: ByteArray): Int {
+                    if (!skipped) {
+                        skip(start)
+                        skipped = true
+                    }
+                    return super.read(b)
+                }
+
+                override fun read(
+                    b: ByteArray,
+                    off: Int,
+                    len: Int,
+                ): Int {
+                    if (!skipped) {
+                        skip(start)
+                        skipped = true
+                    }
+                    return super.read(b, off, len)
+                }
+            }
+
+        return FileResource(
+            path = path,
+            mimeType = mimeType,
+            size = fileSize,
+            inputStream = inputStream,
+            isRangeRequest = true,
+            rangeStart = start,
+            rangeEnd = end,
+        )
+    }
+
+    // DeleteFileOutput 구현
+    override fun deleteFile(path: String) {
+        val fullPath = Paths.get(path)
+
+        if (!Files.exists(fullPath)) {
+            throw RuntimeException("File not found: $path")
+        }
+
+        try {
+            Files.delete(fullPath)
+            logger.info("Successfully deleted file: $path")
+        } catch (e: Exception) {
+            logger.error("Failed to delete file: $path", e)
+            throw RuntimeException("Failed to delete file: $path", e)
         }
     }
 }

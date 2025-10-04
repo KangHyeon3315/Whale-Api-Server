@@ -23,12 +23,13 @@ data class SaveFileRequest(
             path = this.path,
             type = this.type,
             sortOrder = this.sortOrder,
-            tags = this.tags.map { 
-                SaveFileCommand.Tag(
-                    name = it.name,
-                    type = it.type,
-                )
-            },
+            tags =
+                this.tags.map {
+                    SaveFileCommand.Tag(
+                        name = it.name,
+                        type = it.type,
+                    )
+                },
         )
     }
 }

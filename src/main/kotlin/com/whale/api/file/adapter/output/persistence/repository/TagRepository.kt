@@ -9,4 +9,6 @@ interface TagRepository : JpaRepository<TagEntity, UUID> {
         names: List<String>,
         types: List<String>,
     ): List<TagEntity>
+
+    override fun findAll(): List<TagEntity>
 }
