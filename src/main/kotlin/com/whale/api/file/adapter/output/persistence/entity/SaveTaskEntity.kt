@@ -10,6 +10,8 @@ import jakarta.persistence.Convert
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -27,7 +29,8 @@ data class SaveTaskEntity(
     val path: String,
     @Column(name = "type", nullable = false)
     val type: String,
-    @Column(name = "tag_requests", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "tag_requests", nullable = false)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Convert(converter = TagRequestEntityConverter::class)
     val tagRequests: List<TagRequestEntity>,
     @Column(name = "sort_order", nullable = true)

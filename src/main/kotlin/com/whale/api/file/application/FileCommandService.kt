@@ -135,7 +135,7 @@ class FileCommandService(
 
         val identifier = UUID.randomUUID()
         val extension = decodedPath.substringAfterLast('.').lowercase()
-        val newRelativePath = "${fileProperty.filesPath}/non_group/${UUID.randomUUID()}.${extension}"
+        val newRelativePath = "${fileProperty.filesPath}/non_group/${UUID.randomUUID()}.$extension"
 
         val file =
             writeTransactionTemplate.execute {

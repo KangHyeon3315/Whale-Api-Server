@@ -5,11 +5,9 @@ import com.whale.api.file.application.port.`in`.SortType
 import com.whale.api.file.application.port.out.ListDirectoryOutput
 import com.whale.api.file.application.port.out.ValidateFilePathOutput
 import com.whale.api.file.domain.FileTreeItem
-import com.whale.api.file.domain.exception.InvalidPathException
 import com.whale.api.file.domain.property.FileProperty
 import mu.KotlinLogging
 import org.springframework.stereotype.Service
-import java.nio.file.Files
 import java.nio.file.Paths
 
 @Service

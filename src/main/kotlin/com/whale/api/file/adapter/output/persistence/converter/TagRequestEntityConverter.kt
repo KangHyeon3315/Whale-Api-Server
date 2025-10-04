@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
 class TagRequestEntityConverter(
     private val objectMapper: ObjectMapper,
 ) : AttributeConverter<List<TagRequestEntity>, String> {
-    override fun convertToDatabaseColumn(attribute: List<TagRequestEntity>?): String? {
+    override fun convertToDatabaseColumn(attribute: List<TagRequestEntity>?): String {
         return if (attribute.isNullOrEmpty()) {
             "[]"
         } else {
