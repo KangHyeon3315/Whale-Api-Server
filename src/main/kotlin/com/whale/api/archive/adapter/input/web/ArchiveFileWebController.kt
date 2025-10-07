@@ -29,9 +29,13 @@ class ArchiveFileWebController(
         request: HttpServletRequest,
     ): ResponseEntity<StreamingResponseBody> {
         val rangeHeader = request.getHeader("Range")
+        val userAgent = request.getHeader("User-Agent")
+
+        logger.info { "Getting archive file: itemId=$itemId, range=$rangeHeader, userAgent=$userAgent" }
+
         val fileResource = getArchiveFileUseCase.getArchiveFile(itemId, rangeHeader)
 
-        logger.debug { "Getting archive file: $itemId, range: $rangeHeader (${fileResource.size} bytes)" }
+        logger.info { "Serving archive file: ${fileResource.fileName} (${fileResource.size} bytes), mimeType=${fileResource.mimeType}, isPartial=${fileResource.isPartialContent()}" }
 
         val streamingResponseBody = StreamingResponseBody { outputStream ->
             generateFileStream(fileResource, outputStream)
@@ -59,9 +63,11 @@ class ArchiveFileWebController(
     fun getArchiveFileThumbnail(
         @PathVariable itemId: UUID,
     ): ResponseEntity<StreamingResponseBody> {
-        logger.debug { "Getting archive file thumbnail: $itemId" }
+        logger.info { "Getting archive file thumbnail: itemId=$itemId" }
 
         val fileResource = getArchiveFileUseCase.getArchiveFileThumbnail(itemId)
+
+        logger.info { "Serving thumbnail: ${fileResource.fileName} (${fileResource.size} bytes), mimeType=${fileResource.mimeType}" }
 
         val streamingResponseBody = StreamingResponseBody { outputStream ->
             fileResource.inputStream.use { inputStream ->
@@ -83,9 +89,13 @@ class ArchiveFileWebController(
         request: HttpServletRequest,
     ): ResponseEntity<StreamingResponseBody> {
         val rangeHeader = request.getHeader("Range")
+        val userAgent = request.getHeader("User-Agent")
+
+        logger.info { "Getting live photo video: itemId=$itemId, range=$rangeHeader, userAgent=$userAgent" }
+
         val fileResource = getArchiveFileUseCase.getLivePhotoVideo(itemId, rangeHeader)
 
-        logger.debug { "Getting live photo video: $itemId, range: $rangeHeader (${fileResource.size} bytes)" }
+        logger.info { "Serving live photo video: ${fileResource.fileName} (${fileResource.size} bytes), mimeType=${fileResource.mimeType}, isPartial=${fileResource.isPartialContent()}" }
 
         val streamingResponseBody = StreamingResponseBody { outputStream ->
             generateFileStream(fileResource, outputStream)

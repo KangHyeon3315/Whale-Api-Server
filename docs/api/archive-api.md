@@ -109,11 +109,11 @@ curl -X POST http://localhost:8080/archives/550e8400-e29b-41d4-a716-446655440000
     "identifier": "550e8400-e29b-41d4-a716-446655440000",
     "name": "iPhone 갤러리 백업 2024-01",
     "description": "2024년 1월 iPhone 갤러리 전체 백업",
-    "status": "IN_PROGRESS",
     "totalItems": 1500,
     "processedItems": 750,
     "failedItems": 5,
     "progressPercentage": 50.0,
+    "isCompleted": false,
     "createdDate": "2024-01-15T10:30:00Z",
     "modifiedDate": "2024-01-15T11:45:00Z",
     "completedDate": null
@@ -144,11 +144,11 @@ curl -X GET http://localhost:8080/archives \
   "identifier": "550e8400-e29b-41d4-a716-446655440000",
   "name": "iPhone 갤러리 백업 2024-01",
   "description": "2024년 1월 iPhone 갤러리 전체 백업",
-  "status": "COMPLETED",
   "totalItems": 1500,
   "processedItems": 1495,
   "failedItems": 5,
   "progressPercentage": 99.67,
+  "isCompleted": true,
   "createdDate": "2024-01-15T10:30:00Z",
   "modifiedDate": "2024-01-15T14:20:00Z",
   "completedDate": "2024-01-15T14:20:00Z"
@@ -161,7 +161,7 @@ curl -X GET http://localhost:8080/archives/550e8400-e29b-41d4-a716-446655440000 
   -H "Authorization: Bearer <token>"
 ```
 
-### 5. 파일 업로드
+### 3. 파일 업로드
 
 **POST** `/archives/{archiveId}/items`
 
@@ -606,24 +606,12 @@ curl -X GET http://localhost:8080/archives/items/123e4567-e89b-12d3-a456-4266141
 }
 ```
 
-## Archive Status
-
-백업 작업의 상태는 다음과 같습니다:
-
-| 상태 | 설명 |
-|-----|------|
-| PENDING | 백업 작업이 생성되었지만 아직 시작되지 않음 |
-| IN_PROGRESS | 백업 작업이 진행 중 |
-| COMPLETED | 백업 작업이 성공적으로 완료됨 |
-| FAILED | 백업 작업이 실패함 |
-| CANCELLED | 백업 작업이 사용자에 의해 취소됨 |
-
-### 자동 완료
+## 자동 완료
 
 Archive 생성 시 `totalItems`를 설정하면 자동 완료 기능이 활성화됩니다:
 
-- **totalItems > 0**: 처리된 아이템 수가 totalItems에 도달하면 자동으로 COMPLETED 상태로 변경
-- **totalItems = 0**: 자동 완료 비활성화 (수동 완료 필요)
+- **totalItems > 0**: 처리된 아이템 수가 totalItems에 도달하면 자동으로 완료 (`isCompleted: true`, `completedDate` 설정)
+- **totalItems = 0**: 자동 완료 비활성화
 
 예시:
 ```json
@@ -632,7 +620,13 @@ Archive 생성 시 `totalItems`를 설정하면 자동 완료 기능이 활성�
   "totalItems": 100
 }
 ```
-→ 100개 파일 업로드 완료 시 자동으로 COMPLETED 상태로 변경
+→ 100개 파일 업로드 완료 시 자동으로 완료됨
+
+### 완료 상태 확인
+
+Archive의 완료 여부는 다음 필드로 확인할 수 있습니다:
+- `isCompleted`: 완료 여부 (boolean)
+- `completedDate`: 완료 날짜 (null이면 미완료)
 
 ## Metadata Types
 

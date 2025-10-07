@@ -10,7 +10,7 @@ import com.whale.api.archive.application.port.`in`.GetArchiveItemsUseCase
 import com.whale.api.archive.application.port.`in`.GetArchiveTagsUseCase
 import com.whale.api.archive.application.port.`in`.ManageArchiveTagsUseCase
 import com.whale.api.archive.application.port.`in`.GetArchiveStatusUseCase
-import com.whale.api.archive.application.port.`in`.StartArchiveUseCase
+
 import com.whale.api.archive.application.port.`in`.UploadArchiveItemUseCase
 import com.whale.api.archive.application.port.`in`.command.UploadArchiveItemCommand
 import com.whale.api.global.annotation.RequireAuth
@@ -36,7 +36,6 @@ import java.util.UUID
 @RequestMapping("/archives")
 class ArchiveWebController(
     private val createArchiveUseCase: CreateArchiveUseCase,
-    private val startArchiveUseCase: StartArchiveUseCase,
     private val getArchiveStatusUseCase: GetArchiveStatusUseCase,
     private val uploadArchiveItemUseCase: UploadArchiveItemUseCase,
     private val getArchiveItemsUseCase: GetArchiveItemsUseCase,
@@ -52,22 +51,14 @@ class ArchiveWebController(
     fun createArchive(
         @RequestBody request: CreateArchiveRequest,
     ): ResponseEntity<ArchiveResponse> {
-        logger.info { "Creating archive: ${request.name}" }
+        logger.info {
+            "Creating archive: name='${request.name}', " +
+            "description='${request.description}', " +
+            "totalItems=${request.totalItems}"
+        }
         val archive = createArchiveUseCase.createArchive(request.toCommand())
         return ResponseEntity.ok(ArchiveResponse.from(archive))
     }
-
-    @RequireAuth
-    @PostMapping("/{archiveId}/start")
-    fun startArchive(
-        @PathVariable archiveId: UUID,
-    ): ResponseEntity<Void> {
-        logger.info { "Starting archive: $archiveId" }
-        startArchiveUseCase.startArchive(archiveId)
-        return ResponseEntity.ok().build()
-    }
-
-
 
     @RequireAuth
     @GetMapping
@@ -102,7 +93,15 @@ class ArchiveWebController(
         @RequestParam("metadata", required = false) metadataJson: String?,
         @RequestParam("tags", required = false) tagsJson: String?,
     ): ResponseEntity<ArchiveItemResponse> {
-        logger.info { "Uploading item to archive: $archiveId" }
+        logger.info {
+            "Uploading item to archive: $archiveId, " +
+            "file: ${file.originalFilename} (${file.size} bytes), " +
+            "originalPath: $originalPath, " +
+            "isLivePhoto: $isLivePhoto, " +
+            "hasLivePhotoVideo: ${livePhotoVideo != null}, " +
+            "metadata: $metadataJson, " +
+            "tags: $tagsJson"
+        }
 
         // JSON 문자열을 Map/List로 파싱
         val metadata = try {
@@ -120,6 +119,8 @@ class ArchiveWebController(
             logger.warn { "Failed to parse tags JSON: $tagsJson" }
             emptyList<String>()
         }
+
+        logger.info { "Parsed metadata: $metadata, tags: $tags" }
 
         val command = UploadArchiveItemCommand(
             archiveIdentifier = archiveId,
@@ -142,7 +143,9 @@ class ArchiveWebController(
     fun getArchiveItems(
         @PathVariable archiveId: UUID,
     ): ResponseEntity<List<ArchiveItemResponse>> {
+        logger.info { "Getting archive items: archiveId=$archiveId" }
         val items = getArchiveItemsUseCase.getArchiveItems(archiveId)
+        logger.info { "Retrieved ${items.size} items for archive: $archiveId" }
         return ResponseEntity.ok(items.map { ArchiveItemResponse.from(it) })
     }
 
@@ -170,8 +173,10 @@ class ArchiveWebController(
         @PathVariable archiveId: UUID,
         @PathVariable category: String,
     ): ResponseEntity<List<ArchiveItemResponse>> {
+        logger.info { "Getting archive items by category: archiveId=$archiveId, category=$category" }
         val items = getArchiveItemsUseCase.getArchiveItems(archiveId)
         val filteredItems = items.filter { it.getFileCategory() == category }
+        logger.info { "Retrieved ${filteredItems.size} items for category '$category' in archive: $archiveId" }
         return ResponseEntity.ok(filteredItems.map { ArchiveItemResponse.from(it) })
     }
 
@@ -191,7 +196,9 @@ class ArchiveWebController(
     fun getTextContent(
         @PathVariable itemId: UUID,
     ): ResponseEntity<Map<String, String>> {
+        logger.info { "Getting text content: itemId=$itemId" }
         val content = getArchiveItemContentUseCase.getTextContent(itemId)
+        logger.info { "Serving text content: itemId=$itemId, contentLength=${content.length}" }
         return ResponseEntity.ok(mapOf("content" to content))
     }
 
@@ -201,7 +208,9 @@ class ArchiveWebController(
         @PathVariable itemId: UUID,
         @RequestParam("maxLength", defaultValue = "1000") maxLength: Int,
     ): ResponseEntity<Map<String, String>> {
+        logger.info { "Getting text content preview: itemId=$itemId, maxLength=$maxLength" }
         val content = getArchiveItemContentUseCase.getTextContentPreview(itemId, maxLength)
+        logger.info { "Serving text content preview: itemId=$itemId, contentLength=${content.length}, maxLength=$maxLength" }
         return ResponseEntity.ok(mapOf("content" to content, "isPreview" to "true"))
     }
 

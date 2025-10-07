@@ -1,11 +1,8 @@
 package com.whale.api.archive.adapter.output.persistence.entity
 
 import com.whale.api.archive.domain.Archive
-import com.whale.api.archive.domain.enums.ArchiveStatus
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.time.OffsetDateTime
@@ -21,9 +18,6 @@ data class ArchiveEntity(
     val name: String,
     @Column(name = "description", nullable = true)
     val description: String?,
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    val status: ArchiveStatus,
     @Column(name = "total_items", nullable = false)
     val totalItems: Int,
     @Column(name = "processed_items", nullable = false)
@@ -42,7 +36,6 @@ data class ArchiveEntity(
             identifier = this.identifier,
             name = this.name,
             description = this.description,
-            status = this.status,
             totalItems = this.totalItems,
             processedItems = this.processedItems,
             failedItems = this.failedItems,
@@ -58,7 +51,6 @@ data class ArchiveEntity(
                 identifier = this.identifier,
                 name = this.name,
                 description = this.description,
-                status = this.status,
                 totalItems = this.totalItems,
                 processedItems = this.processedItems,
                 failedItems = this.failedItems,
