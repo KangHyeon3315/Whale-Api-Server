@@ -72,3 +72,6 @@ jwt:
 # Media File Setting
 file:
   base-path: ${MEDIA_FILE_BASE_PATH}
+
+archive:
+  base-path: ${ARCHIVE_BASE_PATH}

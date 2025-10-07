@@ -480,6 +480,104 @@ curl -X GET http://localhost:8080/archives/items/text-001/content/preview?maxLen
   -H "Authorization: Bearer <token>"
 ```
 
+### 13. 백업 파일 다운로드
+
+**GET** `/archives/items/{itemId}/file`
+
+백업된 파일을 다운로드합니다. Range 헤더를 지원하여 부분 다운로드가 가능합니다.
+
+#### Path Parameters
+| 파라미터 | 타입 | 설명 |
+|---------|------|------|
+| itemId | UUID | 백업 파일 식별자 |
+
+#### Headers
+| 헤더 | 필수 | 설명 |
+|-----|------|------|
+| Range | No | 부분 다운로드를 위한 범위 지정 (예: bytes=0-1023) |
+
+#### Response
+- **Content-Type**: 파일의 MIME 타입
+- **Content-Length**: 파일 크기 또는 요청된 범위 크기
+- **Accept-Ranges**: bytes
+- **Cache-Control**: public, max-age=3600
+- **Content-Disposition**: inline; filename="파일명"
+
+#### Status Codes
+- **200**: 전체 파일 반환
+- **206**: 부분 파일 반환 (Range 요청 시)
+
+#### Request Example
+```bash
+# 전체 파일 다운로드
+curl -X GET http://localhost:8080/archives/items/123e4567-e89b-12d3-a456-426614174000/file \
+  -H "Authorization: Bearer <token>" \
+  -o downloaded_file.jpg
+
+# 부분 다운로드 (첫 1KB)
+curl -X GET http://localhost:8080/archives/items/123e4567-e89b-12d3-a456-426614174000/file \
+  -H "Authorization: Bearer <token>" \
+  -H "Range: bytes=0-1023" \
+  -o partial_file.jpg
+```
+
+### 14. 백업 파일 썸네일 조회
+
+**GET** `/archives/items/{itemId}/thumbnail`
+
+백업된 이미지나 비디오 파일의 썸네일을 조회합니다.
+
+#### Path Parameters
+| 파라미터 | 타입 | 설명 |
+|---------|------|------|
+| itemId | UUID | 백업 파일 식별자 (이미지 또는 비디오만 가능) |
+
+#### Response
+- **Content-Type**: image/jpeg
+- **Cache-Control**: public, max-age=86400 (24시간)
+
+#### Request Example
+```bash
+curl -X GET http://localhost:8080/archives/items/123e4567-e89b-12d3-a456-426614174000/thumbnail \
+  -H "Authorization: Bearer <token>" \
+  -o thumbnail.jpg
+```
+
+### 15. 라이브 포토 비디오 조회
+
+**GET** `/archives/items/{itemId}/live-photo-video`
+
+라이브 포토의 비디오 부분을 조회합니다. Range 헤더를 지원하여 스트리밍이 가능합니다.
+
+#### Path Parameters
+| 파라미터 | 타입 | 설명 |
+|---------|------|------|
+| itemId | UUID | 라이브 포토 백업 파일 식별자 |
+
+#### Headers
+| 헤더 | 필수 | 설명 |
+|-----|------|------|
+| Range | No | 스트리밍을 위한 범위 지정 (예: bytes=0-1048575) |
+
+#### Response
+- **Content-Type**: video/quicktime
+- **Content-Length**: 비디오 파일 크기 또는 요청된 범위 크기
+- **Accept-Ranges**: bytes
+- **Cache-Control**: public, max-age=3600
+
+#### Status Codes
+- **200**: 전체 비디오 반환
+- **206**: 부분 비디오 반환 (Range 요청 시)
+
+#### Request Example
+```bash
+# 라이브 포토 비디오 스트리밍
+curl -X GET http://localhost:8080/archives/items/123e4567-e89b-12d3-a456-426614174000/live-photo-video \
+  -H "Authorization: Bearer <token>" \
+  -H "Range: bytes=0-1048575" \
+  -o live_photo_video.mov
+```
+
 ## Status Codes
 
 | 상태 코드 | 설명 |
