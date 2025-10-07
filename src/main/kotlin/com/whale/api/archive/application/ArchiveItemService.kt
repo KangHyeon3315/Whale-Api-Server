@@ -46,7 +46,7 @@ class ArchiveItemService(
 
         return writeTransactionTemplate.execute {
             // 1. Archive 존재 확인
-            val archive = findArchiveOutput.findById(command.archiveIdentifier)
+            val archive = findArchiveOutput.findArchiveById(command.archiveIdentifier)
                 ?: throw IllegalArgumentException("Archive not found: ${command.archiveIdentifier}")
 
             // 2. 파일 확장자 검증
@@ -136,7 +136,7 @@ class ArchiveItemService(
     }
 
     override fun getArchiveItem(itemIdentifier: UUID): ArchiveItem {
-        return findArchiveItemOutput.findById(itemIdentifier)
+        return findArchiveItemOutput.findArchiveItemById(itemIdentifier)
             ?: throw IllegalArgumentException("Archive item not found: $itemIdentifier")
     }
 
@@ -145,7 +145,7 @@ class ArchiveItemService(
     }
 
     override fun getTextContent(itemIdentifier: UUID): String {
-        val item = findArchiveItemOutput.findById(itemIdentifier)
+        val item = findArchiveItemOutput.findArchiveItemById(itemIdentifier)
             ?: throw IllegalArgumentException("Archive item not found: $itemIdentifier")
 
         if (!item.isText()) {
@@ -160,7 +160,7 @@ class ArchiveItemService(
     }
 
     override fun getTextContentPreview(itemIdentifier: UUID, maxLength: Int): String {
-        val item = findArchiveItemOutput.findById(itemIdentifier)
+        val item = findArchiveItemOutput.findArchiveItemById(itemIdentifier)
             ?: throw IllegalArgumentException("Archive item not found: $itemIdentifier")
 
         if (!item.isText()) {

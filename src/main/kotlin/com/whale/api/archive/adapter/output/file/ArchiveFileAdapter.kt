@@ -71,9 +71,7 @@ class ArchiveFileAdapter(
         }
     }
 
-    override fun fileExists(filePath: String): Boolean {
-        return Files.exists(Paths.get(filePath))
-    }
+
 
     override fun getFileSize(filePath: String): Long {
         return try {

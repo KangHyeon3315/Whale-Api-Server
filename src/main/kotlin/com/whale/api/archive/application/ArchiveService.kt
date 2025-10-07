@@ -50,7 +50,7 @@ class ArchiveService(
         logger.info { "Starting archive: $archiveIdentifier" }
 
         writeTransactionTemplate.execute {
-            val archive = findArchiveOutput.findById(archiveIdentifier)
+            val archive = findArchiveOutput.findArchiveById(archiveIdentifier)
                 ?: throw IllegalArgumentException("Archive not found: $archiveIdentifier")
 
             if (!archive.canStart()) {
@@ -63,7 +63,7 @@ class ArchiveService(
     }
 
     override fun getArchive(archiveIdentifier: UUID): Archive {
-        return findArchiveOutput.findById(archiveIdentifier)
+        return findArchiveOutput.findArchiveById(archiveIdentifier)
             ?: throw IllegalArgumentException("Archive not found: $archiveIdentifier")
     }
 

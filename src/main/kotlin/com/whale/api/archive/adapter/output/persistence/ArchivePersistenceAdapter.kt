@@ -34,7 +34,7 @@ class ArchivePersistenceAdapter(
         return archiveRepository.save(archive.toEntity()).toDomain()
     }
 
-    override fun findById(identifier: UUID): Archive? {
+    override fun findArchiveById(identifier: UUID): Archive? {
         return archiveRepository.findById(identifier).orElse(null)?.toDomain()
     }
 
@@ -46,7 +46,7 @@ class ArchivePersistenceAdapter(
         return archiveItemRepository.save(archiveItem.toEntity()).toDomain()
     }
 
-    override fun findById(identifier: UUID): ArchiveItem? {
+    override fun findArchiveItemById(identifier: UUID): ArchiveItem? {
         return archiveItemRepository.findById(identifier).orElse(null)?.toDomain()
     }
 
