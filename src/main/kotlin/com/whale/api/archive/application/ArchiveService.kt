@@ -33,7 +33,7 @@ class ArchiveService(
             name = command.name,
             description = command.description,
             status = ArchiveStatus.PENDING,
-            totalItems = 0,
+            totalItems = command.totalItems,
             processedItems = 0,
             failedItems = 0,
             createdDate = OffsetDateTime.now(),

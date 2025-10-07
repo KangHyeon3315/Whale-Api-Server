@@ -11,6 +11,7 @@ Whale API Server의 iOS 갤러리 백업 관련 API 문서입니다.
 - 파일 중복 검사 (체크섬 기반)
 - 파일 카테고리별 분류 및 조회
 - 텍스트 파일 내용 조회 및 미리보기
+- 태그 기반 파일 분류 및 검색
 
 ### 지원 파일 타입
 - **이미지**: `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.webp`, `.tiff`, `.heic`, `.heif`
@@ -33,7 +34,8 @@ Whale API Server의 iOS 갤러리 백업 관련 API 문서입니다.
 ```json
 {
   "name": "iPhone 갤러리 백업 2024-01",
-  "description": "2024년 1월 iPhone 갤러리 전체 백업"
+  "description": "2024년 1월 iPhone 갤러리 전체 백업",
+  "totalItems": 150
 }
 ```
 
@@ -42,6 +44,7 @@ Whale API Server의 iOS 갤러리 백업 관련 API 문서입니다.
 |-------------|------|----------|------|
 | name | String | No | 백업 작업 이름 |
 | description | String | Yes | 백업 작업 설명 |
+| totalItems | Integer | Yes | 전체 파일 개수 (설정 시 자동 완료, 기본값: 0) |
 
 #### Response
 ```json
@@ -93,7 +96,7 @@ curl -X POST http://localhost:8080/archives/550e8400-e29b-41d4-a716-446655440000
   -H "Authorization: Bearer <token>"
 ```
 
-### 3. 모든 백업 작업 조회
+### 4. 모든 백업 작업 조회
 
 **GET** `/archives`
 
@@ -124,7 +127,7 @@ curl -X GET http://localhost:8080/archives \
   -H "Authorization: Bearer <token>"
 ```
 
-### 4. 특정 백업 작업 조회
+### 5. 특정 백업 작업 조회
 
 **GET** `/archives/{archiveId}`
 
@@ -178,7 +181,8 @@ curl -X GET http://localhost:8080/archives/550e8400-e29b-41d4-a716-446655440000 
 | livePhotoVideo | MultipartFile | No | 라이브 포토의 비디오 파일 |
 | originalCreatedDate | ISO DateTime | No | 원본 파일 생성 날짜 |
 | originalModifiedDate | ISO DateTime | No | 원본 파일 수정 날짜 |
-| metadata | Map<String, String> | No | 추가 메타데이터 |
+| metadata | JSON String | No | 추가 메타데이터 (JSON 형태) |
+| tags | JSON String | No | 파일에 연결할 태그 목록 (JSON 배열) |
 
 #### Response
 ```json
@@ -217,11 +221,13 @@ curl -X POST http://localhost:8080/archives/550e8400-e29b-41d4-a716-446655440000
   -F "originalPath=/var/mobile/Media/DCIM/100APPLE/IMG_0002.HEIC" \
   -F "isLivePhoto=true"
 
-# 텍스트 파일 업로드
+# 텍스트 파일 업로드 (메타데이터와 태그 포함)
 curl -X POST http://localhost:8080/archives/550e8400-e29b-41d4-a716-446655440000/items \
   -H "Authorization: Bearer <token>" \
   -F "file=@document.txt" \
-  -F "originalPath=/var/mobile/Documents/document.txt"
+  -F "originalPath=/var/mobile/Documents/document.txt" \
+  -F 'metadata={"author":"John","category":"work"}' \
+  -F 'tags=["work","important","document"]'
 ```
 
 ### 6. 백업된 파일 목록 조회
@@ -612,6 +618,22 @@ curl -X GET http://localhost:8080/archives/items/123e4567-e89b-12d3-a456-4266141
 | FAILED | 백업 작업이 실패함 |
 | CANCELLED | 백업 작업이 사용자에 의해 취소됨 |
 
+### 자동 완료
+
+Archive 생성 시 `totalItems`를 설정하면 자동 완료 기능이 활성화됩니다:
+
+- **totalItems > 0**: 처리된 아이템 수가 totalItems에 도달하면 자동으로 COMPLETED 상태로 변경
+- **totalItems = 0**: 자동 완료 비활성화 (수동 완료 필요)
+
+예시:
+```json
+{
+  "name": "iPhone 갤러리 백업",
+  "totalItems": 100
+}
+```
+→ 100개 파일 업로드 완료 시 자동으로 COMPLETED 상태로 변경
+
 ## Metadata Types
 
 추출되는 메타데이터 타입은 다음과 같습니다:
@@ -648,3 +670,141 @@ curl -X GET http://localhost:8080/archives/items/123e4567-e89b-12d3-a456-4266141
 - 텍스트 파일의 인코딩은 자동으로 감지됩니다 (UTF-8, UTF-16, ASCII)
 - 메타데이터 추출은 비동기로 처리되며, 실패해도 파일 업로드는 성공합니다
 - 체크섬은 SHA-256 알고리즘을 사용하여 계산됩니다
+
+### 16. 모든 태그 조회
+
+**GET** `/archives/tags`
+
+시스템에 등록된 모든 태그를 조회합니다.
+
+#### Response
+```json
+[
+  {
+    "identifier": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "vacation",
+    "type": "user",
+    "createdDate": "2024-01-15T10:30:00+09:00"
+  },
+  {
+    "identifier": "550e8400-e29b-41d4-a716-446655440001",
+    "name": "family",
+    "type": "user",
+    "createdDate": "2024-01-15T11:00:00+09:00"
+  }
+]
+```
+
+### 17. 아이템 태그 조회
+
+**GET** `/archives/items/{itemId}/tags`
+
+특정 아카이브 아이템에 연결된 태그들을 조회합니다.
+
+#### Path Parameters
+| 파라미터 | 타입 | 설명 |
+|---------|------|------|
+| itemId | UUID | 아카이브 아이템 식별자 |
+
+#### Response
+```json
+[
+  {
+    "identifier": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "vacation",
+    "type": "user",
+    "createdDate": "2024-01-15T10:30:00+09:00"
+  }
+]
+```
+
+### 18. 아이템에 태그 추가
+
+**POST** `/archives/items/{itemId}/tags`
+
+특정 아카이브 아이템에 태그를 추가합니다. 존재하지 않는 태그는 자동으로 생성됩니다.
+
+#### Path Parameters
+| 파라미터 | 타입 | 설명 |
+|---------|------|------|
+| itemId | UUID | 아카이브 아이템 식별자 |
+
+#### Request Body
+```json
+{
+  "tags": ["vacation", "beach", "2024"]
+}
+```
+
+#### Response
+```json
+[
+  {
+    "identifier": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "vacation",
+    "type": "user",
+    "createdDate": "2024-01-15T10:30:00+09:00"
+  },
+  {
+    "identifier": "550e8400-e29b-41d4-a716-446655440001",
+    "name": "beach",
+    "type": "user",
+    "createdDate": "2024-01-15T10:30:00+09:00"
+  }
+]
+```
+
+### 19. 아이템 태그 업데이트
+
+**PUT** `/archives/items/{itemId}/tags`
+
+특정 아카이브 아이템의 태그를 완전히 교체합니다.
+
+#### Path Parameters
+| 파라미터 | 타입 | 설명 |
+|---------|------|------|
+| itemId | UUID | 아카이브 아이템 식별자 |
+
+#### Request Body
+```json
+{
+  "tags": ["family", "home"]
+}
+```
+
+### 20. 아이템에서 태그 제거
+
+**DELETE** `/archives/items/{itemId}/tags`
+
+특정 아카이브 아이템에서 지정된 태그들을 제거합니다.
+
+#### Path Parameters
+| 파라미터 | 타입 | 설명 |
+|---------|------|------|
+| itemId | UUID | 아카이브 아이템 식별자 |
+
+#### Request Body
+```json
+{
+  "tags": ["vacation", "beach"]
+}
+```
+
+### 21. 태그로 아이템 검색
+
+**GET** `/archives/tags/{tagName}/items`
+
+특정 태그가 연결된 모든 아카이브 아이템의 식별자를 조회합니다.
+
+#### Path Parameters
+| 파라미터 | 타입 | 설명 |
+|---------|------|------|
+| tagName | String | 태그 이름 |
+
+#### Response
+```json
+[
+  "550e8400-e29b-41d4-a716-446655440000",
+  "550e8400-e29b-41d4-a716-446655440001"
+]
+```

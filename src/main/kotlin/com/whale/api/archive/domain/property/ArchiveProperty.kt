@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration
 class ArchiveProperty(
     @Value("\${archive.base-path:/archives}")
     val basePath: String,
-    @Value("\${archive.max-file-size:104857600}") // 100MB
+    @Value("\${archive.max-file-size:1048576000}") // 1000MB
     val maxFileSize: Long,
     @Value("\${archive.allowed-extensions:.jpg,.jpeg,.png,.gif,.bmp,.webp,.tiff,.heic,.heif,.mp4,.mov,.m4v,.txt,.md,.json,.xml,.csv,.log,.rtf,.doc,.docx,.pdf,.xls,.xlsx,.ppt,.pptx}")
     val allowedExtensions: String,

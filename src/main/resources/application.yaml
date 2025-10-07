@@ -13,6 +13,12 @@ spring:
     format:
       date: yyyy-MM-dd
 
+  #---- File Upload Setting ----
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
   #---- Datasource Setting ----
   datasource:
     driverClassName: org.postgresql.Driver

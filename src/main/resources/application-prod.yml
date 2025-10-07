@@ -1,3 +1,10 @@
+spring:
+  #---- File Upload Setting ----
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
 #---- Logging Setting ----
 logging:
   config: classpath:logback/logback-prod.xml

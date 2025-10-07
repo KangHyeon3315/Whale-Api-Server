@@ -42,6 +42,19 @@ class Archive(
         modifiedDate = OffsetDateTime.now()
     }
 
+    fun incrementProcessedItemsAndCheckCompletion(): Boolean {
+        processedItems++
+        modifiedDate = OffsetDateTime.now()
+
+        // totalItems가 설정되어 있고, 모든 아이템 처리 완료 시 자동 완료
+        if (totalItems > 0 && (processedItems + failedItems) >= totalItems && status == ArchiveStatus.IN_PROGRESS) {
+            complete()
+            return true
+        }
+
+        return false
+    }
+
     fun incrementFailedItems() {
         failedItems++
         modifiedDate = OffsetDateTime.now()
