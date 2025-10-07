@@ -182,7 +182,7 @@ curl -X GET http://localhost:8080/archives/550e8400-e29b-41d4-a716-446655440000 
 | originalCreatedDate | ISO DateTime | No | 원본 파일 생성 날짜 |
 | originalModifiedDate | ISO DateTime | No | 원본 파일 수정 날짜 |
 | metadata | JSON String | No | 추가 메타데이터 (JSON 형태) |
-| tags | JSON String | No | 파일에 연결할 태그 목록 (JSON 배열) |
+
 
 #### Response
 ```json
@@ -226,46 +226,70 @@ curl -X POST http://localhost:8080/archives/550e8400-e29b-41d4-a716-446655440000
   -H "Authorization: Bearer <token>" \
   -F "file=@document.txt" \
   -F "originalPath=/var/mobile/Documents/document.txt" \
-  -F 'metadata={"author":"John","category":"work"}' \
-  -F 'tags=["work","important","document"]'
+  -F 'metadata={"author":"John","category":"work"}'
 ```
 
-### 6. 백업된 파일 목록 조회
+### 6. 백업된 파일 목록 조회 및 검색
 
 **GET** `/archives/{archiveId}/items`
 
-특정 백업 작업의 모든 파일 목록을 조회합니다.
+특정 백업 작업의 파일 목록을 조회합니다. 파일명 검색과 태그 필터링이 가능합니다.
 
 #### Path Parameters
 | 파라미터 | 타입 | 설명 |
 |---------|------|------|
 | archiveId | UUID | 백업 작업 식별자 |
 
+#### Query Parameters
+| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
+|---------|------|------|-------|------|
+| fileName | String | No | - | 파일명 부분 검색 (대소문자 무시) |
+| cursor | String | No | - | 페이지네이션 커서 (ISO 8601 날짜 형식) |
+| limit | Integer | No | 20 | 페이지 크기 (최대 100) |
+
 #### Response
 ```json
-[
-  {
-    "identifier": "123e4567-e89b-12d3-a456-426614174000",
-    "archiveIdentifier": "550e8400-e29b-41d4-a716-446655440000",
-    "originalPath": "/var/mobile/Media/DCIM/100APPLE/IMG_0001.HEIC",
-    "fileName": "IMG_0001.HEIC",
-    "fileSize": 2048576,
-    "mimeType": "image/heic",
-    "fileCategory": "image",
-    "isLivePhoto": true,
-    "hasLivePhotoVideo": true,
-    "checksum": "a1b2c3d4e5f6...",
-    "originalCreatedDate": "2024-01-10T15:30:00Z",
-    "originalModifiedDate": "2024-01-10T15:30:00Z",
-    "createdDate": "2024-01-15T11:00:00Z",
-    "modifiedDate": "2024-01-15T11:00:00Z"
-  }
-]
+{
+  "items": [
+    {
+      "identifier": "123e4567-e89b-12d3-a456-426614174000",
+      "archiveIdentifier": "550e8400-e29b-41d4-a716-446655440000",
+      "originalPath": "/var/mobile/Media/DCIM/100APPLE/IMG_0001.HEIC",
+      "fileName": "IMG_0001.HEIC",
+      "fileSize": 2048576,
+      "mimeType": "image/heic",
+      "fileCategory": "image",
+      "isLivePhoto": true,
+      "hasLivePhotoVideo": true,
+      "checksum": "a1b2c3d4e5f6...",
+      "originalCreatedDate": "2024-01-10T15:30:00Z",
+      "originalModifiedDate": "2024-01-10T15:30:00Z",
+      "createdDate": "2024-01-15T11:00:00Z",
+      "modifiedDate": "2024-01-15T11:00:00Z"
+    }
+  ],
+  "hasNext": true,
+  "nextCursor": "2024-01-15T11:00:00Z",
+  "totalCount": 1500
+}
 ```
 
-#### Request Example
+#### Request Examples
 ```bash
+# 모든 파일 조회
 curl -X GET http://localhost:8080/archives/550e8400-e29b-41d4-a716-446655440000/items \
+  -H "Authorization: Bearer <token>"
+
+# 파일명으로 검색 (IMG가 포함된 파일들)
+curl -X GET "http://localhost:8080/archives/550e8400-e29b-41d4-a716-446655440000/items?fileName=IMG" \
+  -H "Authorization: Bearer <token>"
+
+# 페이지네이션 (첫 페이지, 10개씩)
+curl -X GET "http://localhost:8080/archives/550e8400-e29b-41d4-a716-446655440000/items?limit=10" \
+  -H "Authorization: Bearer <token>"
+
+# 페이지네이션 (다음 페이지)
+curl -X GET "http://localhost:8080/archives/550e8400-e29b-41d4-a716-446655440000/items?cursor=2024-01-15T11:00:00Z&limit=10" \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -517,12 +541,10 @@ curl -X GET http://localhost:8080/archives/items/text-001/content/preview?maxLen
 ```bash
 # 전체 파일 다운로드
 curl -X GET http://localhost:8080/archives/items/123e4567-e89b-12d3-a456-426614174000/file \
-  -H "Authorization: Bearer <token>" \
   -o downloaded_file.jpg
 
 # 부분 다운로드 (첫 1KB)
 curl -X GET http://localhost:8080/archives/items/123e4567-e89b-12d3-a456-426614174000/file \
-  -H "Authorization: Bearer <token>" \
   -H "Range: bytes=0-1023" \
   -o partial_file.jpg
 ```
@@ -579,7 +601,6 @@ curl -X GET http://localhost:8080/archives/items/123e4567-e89b-12d3-a456-4266141
 ```bash
 # 라이브 포토 비디오 스트리밍
 curl -X GET http://localhost:8080/archives/items/123e4567-e89b-12d3-a456-426614174000/live-photo-video \
-  -H "Authorization: Bearer <token>" \
   -H "Range: bytes=0-1048575" \
   -o live_photo_video.mov
 ```
@@ -628,6 +649,33 @@ Archive의 완료 여부는 다음 필드로 확인할 수 있습니다:
 - `isCompleted`: 완료 여부 (boolean)
 - `completedDate`: 완료 날짜 (null이면 미완료)
 
+## 페이지네이션
+
+Archive items 조회 API는 커서 기반 페이지네이션을 지원합니다.
+
+### 커서 기반 페이지네이션
+
+- **정렬 기준**: `createdDate` (생성 일시) 내림차순
+- **커서**: 마지막 아이템의 `createdDate` 값을 다음 요청의 `cursor`로 사용
+- **페이지 크기**: `limit` 파라미터로 조절 (기본값: 20, 최대: 100)
+
+### 응답 구조
+
+```json
+{
+  "items": [...],           // 아이템 목록
+  "hasNext": true,          // 다음 페이지 존재 여부
+  "nextCursor": "2024-01-15T11:00:00Z",  // 다음 페이지 커서
+  "totalCount": 1500        // 전체 아이템 수
+}
+```
+
+### 페이지네이션 사용법
+
+1. **첫 페이지**: `cursor` 없이 요청
+2. **다음 페이지**: 응답의 `nextCursor` 값을 `cursor`로 사용
+3. **마지막 페이지**: `hasNext`가 `false`일 때
+
 ## Metadata Types
 
 추출되는 메타데이터 타입은 다음과 같습니다:
@@ -665,140 +713,4 @@ Archive의 완료 여부는 다음 필드로 확인할 수 있습니다:
 - 메타데이터 추출은 비동기로 처리되며, 실패해도 파일 업로드는 성공합니다
 - 체크섬은 SHA-256 알고리즘을 사용하여 계산됩니다
 
-### 16. 모든 태그 조회
 
-**GET** `/archives/tags`
-
-시스템에 등록된 모든 태그를 조회합니다.
-
-#### Response
-```json
-[
-  {
-    "identifier": "550e8400-e29b-41d4-a716-446655440000",
-    "name": "vacation",
-    "type": "user",
-    "createdDate": "2024-01-15T10:30:00+09:00"
-  },
-  {
-    "identifier": "550e8400-e29b-41d4-a716-446655440001",
-    "name": "family",
-    "type": "user",
-    "createdDate": "2024-01-15T11:00:00+09:00"
-  }
-]
-```
-
-### 17. 아이템 태그 조회
-
-**GET** `/archives/items/{itemId}/tags`
-
-특정 아카이브 아이템에 연결된 태그들을 조회합니다.
-
-#### Path Parameters
-| 파라미터 | 타입 | 설명 |
-|---------|------|------|
-| itemId | UUID | 아카이브 아이템 식별자 |
-
-#### Response
-```json
-[
-  {
-    "identifier": "550e8400-e29b-41d4-a716-446655440000",
-    "name": "vacation",
-    "type": "user",
-    "createdDate": "2024-01-15T10:30:00+09:00"
-  }
-]
-```
-
-### 18. 아이템에 태그 추가
-
-**POST** `/archives/items/{itemId}/tags`
-
-특정 아카이브 아이템에 태그를 추가합니다. 존재하지 않는 태그는 자동으로 생성됩니다.
-
-#### Path Parameters
-| 파라미터 | 타입 | 설명 |
-|---------|------|------|
-| itemId | UUID | 아카이브 아이템 식별자 |
-
-#### Request Body
-```json
-{
-  "tags": ["vacation", "beach", "2024"]
-}
-```
-
-#### Response
-```json
-[
-  {
-    "identifier": "550e8400-e29b-41d4-a716-446655440000",
-    "name": "vacation",
-    "type": "user",
-    "createdDate": "2024-01-15T10:30:00+09:00"
-  },
-  {
-    "identifier": "550e8400-e29b-41d4-a716-446655440001",
-    "name": "beach",
-    "type": "user",
-    "createdDate": "2024-01-15T10:30:00+09:00"
-  }
-]
-```
-
-### 19. 아이템 태그 업데이트
-
-**PUT** `/archives/items/{itemId}/tags`
-
-특정 아카이브 아이템의 태그를 완전히 교체합니다.
-
-#### Path Parameters
-| 파라미터 | 타입 | 설명 |
-|---------|------|------|
-| itemId | UUID | 아카이브 아이템 식별자 |
-
-#### Request Body
-```json
-{
-  "tags": ["family", "home"]
-}
-```
-
-### 20. 아이템에서 태그 제거
-
-**DELETE** `/archives/items/{itemId}/tags`
-
-특정 아카이브 아이템에서 지정된 태그들을 제거합니다.
-
-#### Path Parameters
-| 파라미터 | 타입 | 설명 |
-|---------|------|------|
-| itemId | UUID | 아카이브 아이템 식별자 |
-
-#### Request Body
-```json
-{
-  "tags": ["vacation", "beach"]
-}
-```
-
-### 21. 태그로 아이템 검색
-
-**GET** `/archives/tags/{tagName}/items`
-
-특정 태그가 연결된 모든 아카이브 아이템의 식별자를 조회합니다.
-
-#### Path Parameters
-| 파라미터 | 타입 | 설명 |
-|---------|------|------|
-| tagName | String | 태그 이름 |
-
-#### Response
-```json
-[
-  "550e8400-e29b-41d4-a716-446655440000",
-  "550e8400-e29b-41d4-a716-446655440001"
-]
-```

@@ -22,7 +22,6 @@ class ArchiveFileWebController(
 ) {
     private val logger = KotlinLogging.logger {}
 
-    @RequireAuth
     @GetMapping("/items/{itemId}/file")
     fun getArchiveFile(
         @PathVariable itemId: UUID,
@@ -82,7 +81,6 @@ class ArchiveFileWebController(
             .body(streamingResponseBody)
     }
 
-    @RequireAuth
     @GetMapping("/items/{itemId}/live-photo-video")
     fun getLivePhotoVideo(
         @PathVariable itemId: UUID,

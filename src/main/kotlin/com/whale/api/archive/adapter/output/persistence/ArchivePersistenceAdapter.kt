@@ -15,7 +15,11 @@ import com.whale.api.archive.application.port.out.SaveArchiveOutput
 import com.whale.api.archive.domain.Archive
 import com.whale.api.archive.domain.ArchiveItem
 import com.whale.api.archive.domain.ArchiveMetadata
+import com.querydsl.jpa.impl.JPAQueryFactory
+import com.whale.api.archive.adapter.output.persistence.entity.QArchiveItemEntity
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Repository
+import java.time.OffsetDateTime
 import java.util.UUID
 
 @Repository
@@ -23,6 +27,7 @@ class ArchivePersistenceAdapter(
     private val archiveRepository: ArchiveRepository,
     private val archiveItemRepository: ArchiveItemRepository,
     private val archiveMetadataRepository: ArchiveMetadataRepository,
+    private val jpaQueryFactory: JPAQueryFactory,
 ) : SaveArchiveOutput,
     FindArchiveOutput,
     SaveArchiveItemOutput,
@@ -54,8 +59,74 @@ class ArchivePersistenceAdapter(
         return archiveItemRepository.findByArchiveIdentifier(archiveIdentifier).map { it.toDomain() }
     }
 
+    override fun findByArchiveIdentifierWithFilters(archiveIdentifier: UUID, fileName: String?, tags: List<String>?): List<ArchiveItem> {
+        val qArchiveItem = QArchiveItemEntity.archiveItemEntity
+
+        var query = jpaQueryFactory
+            .select(qArchiveItem)
+            .from(qArchiveItem)
+            .where(qArchiveItem.archiveIdentifier.eq(archiveIdentifier))
+
+        // 파일명 필터
+        if (!fileName.isNullOrBlank()) {
+            query = query.where(qArchiveItem.fileName.lower().contains(fileName.lowercase()))
+        }
+
+        return query
+            .orderBy(qArchiveItem.createdDate.desc())
+            .fetch()
+            .map { it.toDomain() }
+    }
+
+    override fun findByArchiveIdentifierWithFiltersAndPagination(
+        archiveIdentifier: UUID,
+        fileName: String?,
+        tags: List<String>?,
+        cursor: OffsetDateTime?,
+        limit: Int
+    ): List<ArchiveItem> {
+        val qArchiveItem = QArchiveItemEntity.archiveItemEntity
+
+        var query = jpaQueryFactory
+            .select(qArchiveItem)
+            .from(qArchiveItem)
+            .where(qArchiveItem.archiveIdentifier.eq(archiveIdentifier))
+
+        // 파일명 필터
+        if (!fileName.isNullOrBlank()) {
+            query = query.where(qArchiveItem.fileName.lower().contains(fileName.lowercase()))
+        }
+
+        // 커서 필터
+        if (cursor != null) {
+            query = query.where(qArchiveItem.createdDate.lt(cursor))
+        }
+
+        return query
+            .orderBy(qArchiveItem.createdDate.desc())
+            .limit(limit.toLong())
+            .fetch()
+            .map { it.toDomain() }
+    }
+
     override fun countByArchiveIdentifier(archiveIdentifier: UUID): Int {
         return archiveItemRepository.countByArchiveIdentifier(archiveIdentifier)
+    }
+
+    override fun countByArchiveIdentifierWithFilters(archiveIdentifier: UUID, fileName: String?, tags: List<String>?): Int {
+        val qArchiveItem = QArchiveItemEntity.archiveItemEntity
+
+        var query = jpaQueryFactory
+            .select(qArchiveItem.count())
+            .from(qArchiveItem)
+            .where(qArchiveItem.archiveIdentifier.eq(archiveIdentifier))
+
+        // 파일명 필터
+        if (!fileName.isNullOrBlank()) {
+            query = query.where(qArchiveItem.fileName.lower().contains(fileName.lowercase()))
+        }
+
+        return query.fetchOne()?.toInt() ?: 0
     }
 
     override fun save(archiveMetadata: ArchiveMetadata): ArchiveMetadata {

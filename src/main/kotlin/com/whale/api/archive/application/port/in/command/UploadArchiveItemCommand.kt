@@ -13,5 +13,4 @@ data class UploadArchiveItemCommand(
     val originalCreatedDate: OffsetDateTime?,
     val originalModifiedDate: OffsetDateTime?,
     val metadata: Map<String, String> = emptyMap(),
-    val tags: List<String> = emptyList(),
 )

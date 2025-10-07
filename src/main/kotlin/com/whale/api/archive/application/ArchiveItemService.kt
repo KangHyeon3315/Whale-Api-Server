@@ -1,5 +1,6 @@
 package com.whale.api.archive.application
 
+import com.whale.api.archive.application.port.`in`.ArchiveItemPage
 import com.whale.api.archive.application.port.`in`.GetArchiveItemContentUseCase
 import com.whale.api.archive.application.port.`in`.GetArchiveItemsUseCase
 import com.whale.api.archive.application.port.`in`.UploadArchiveItemUseCase
@@ -8,18 +9,14 @@ import com.whale.api.archive.application.port.out.FileStorageOutput
 import com.whale.api.archive.application.port.out.FindArchiveItemOutput
 import com.whale.api.archive.application.port.out.FindArchiveMetadataOutput
 import com.whale.api.archive.application.port.out.FindArchiveOutput
-import com.whale.api.archive.application.port.out.FindArchiveTagOutput
-import com.whale.api.archive.application.port.out.SaveArchiveItemTagOutput
-import com.whale.api.archive.application.port.out.SaveArchiveTagOutput
+
 import com.whale.api.archive.application.port.out.MetadataExtractionOutput
 import com.whale.api.archive.application.port.out.ReadArchiveItemContentOutput
 import com.whale.api.archive.application.port.out.SaveArchiveItemOutput
 import com.whale.api.archive.application.port.out.SaveArchiveMetadataOutput
 import com.whale.api.archive.application.port.out.SaveArchiveOutput
 import com.whale.api.archive.domain.ArchiveItem
-import com.whale.api.archive.domain.ArchiveItemTag
 import com.whale.api.archive.domain.ArchiveMetadata
-import com.whale.api.archive.domain.ArchiveTag
 import com.whale.api.archive.domain.property.ArchiveProperty
 import mu.KotlinLogging
 import org.springframework.stereotype.Service
@@ -39,9 +36,7 @@ class ArchiveItemService(
     private val metadataExtractionOutput: MetadataExtractionOutput,
     private val archiveProperty: ArchiveProperty,
     private val readArchiveItemContentOutput: ReadArchiveItemContentOutput,
-    private val findArchiveTagOutput: FindArchiveTagOutput,
-    private val saveArchiveTagOutput: SaveArchiveTagOutput,
-    private val saveArchiveItemTagOutput: SaveArchiveItemTagOutput,
+
     private val writeTransactionTemplate: TransactionTemplate,
 ) : UploadArchiveItemUseCase,
     GetArchiveItemsUseCase,
@@ -131,36 +126,7 @@ class ArchiveItemService(
                 logger.warn(e) { "Failed to extract metadata for item: ${savedItem.identifier}" }
             }
 
-            // 9. 태그 처리
-            if (command.tags.isNotEmpty()) {
-                try {
-                    // 기존 태그들과 새로운 태그들 처리
-                    val existingTags = findArchiveTagOutput.findAllByNameInAndTypeIn(command.tags, listOf("user"))
-                    val existingTagNames = existingTags.map { it.name }.toSet()
-
-                    // 새로운 태그들 생성
-                    val newTagNames = command.tags.filter { it !in existingTagNames }
-                    val newTags = newTagNames.map { ArchiveTag.create(it, "user") }
-                    val savedNewTags = if (newTags.isNotEmpty()) {
-                        saveArchiveTagOutput.saveAllTags(newTags)
-                    } else {
-                        emptyList()
-                    }
-
-                    // 모든 태그들
-                    val allTags = existingTags + savedNewTags
-
-                    // 아이템-태그 연결 생성
-                    val itemTags = allTags.map { ArchiveItemTag.create(savedItem.identifier, it.identifier) }
-                    if (itemTags.isNotEmpty()) {
-                        saveArchiveItemTagOutput.saveAllItemTags(itemTags)
-                    }
-                } catch (e: Exception) {
-                    logger.warn(e) { "Failed to process tags for item: ${savedItem.identifier}" }
-                }
-            }
-
-            // 10. Archive 진행 상태 업데이트 및 자동 완료 체크
+            // 9. Archive 진행 상태 업데이트 및 자동 완료 체크
             val isCompleted = archive.incrementProcessedItemsAndCheckCompletion()
             saveArchiveOutput.save(archive)
 
@@ -174,6 +140,39 @@ class ArchiveItemService(
 
     override fun getArchiveItems(archiveIdentifier: UUID): List<ArchiveItem> {
         return findArchiveItemOutput.findByArchiveIdentifier(archiveIdentifier)
+    }
+
+    override fun getArchiveItems(archiveIdentifier: UUID, fileName: String?, tags: List<String>?): List<ArchiveItem> {
+        logger.info { "Searching archive items: archiveId=$archiveIdentifier, fileName=$fileName, tags=$tags" }
+        return findArchiveItemOutput.findByArchiveIdentifierWithFilters(archiveIdentifier, fileName, tags)
+    }
+
+    override fun getArchiveItems(
+        archiveIdentifier: UUID,
+        fileName: String?,
+        tags: List<String>?,
+        cursor: OffsetDateTime?,
+        limit: Int
+    ): ArchiveItemPage {
+        logger.info { "Searching archive items with pagination: archiveId=$archiveIdentifier, fileName=$fileName, tags=$tags, cursor=$cursor, limit=$limit" }
+
+        // limit + 1로 조회해서 hasNext 판단
+        val items = findArchiveItemOutput.findByArchiveIdentifierWithFiltersAndPagination(
+            archiveIdentifier, fileName, tags, cursor, limit + 1
+        )
+
+        val hasNext = items.size > limit
+        val resultItems = if (hasNext) items.dropLast(1) else items
+
+        val totalCount = findArchiveItemOutput.countByArchiveIdentifierWithFilters(archiveIdentifier, fileName, tags)
+
+        logger.info { "Retrieved ${resultItems.size} items (hasNext=$hasNext, totalCount=$totalCount)" }
+
+        return ArchiveItemPage(
+            items = resultItems,
+            hasNext = hasNext,
+            totalCount = totalCount
+        )
     }
 
     override fun getArchiveItem(itemIdentifier: UUID): ArchiveItem {

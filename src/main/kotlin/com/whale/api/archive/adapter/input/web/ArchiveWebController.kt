@@ -1,14 +1,14 @@
 package com.whale.api.archive.adapter.input.web
 
 import com.whale.api.archive.adapter.input.web.request.CreateArchiveRequest
+import com.whale.api.archive.adapter.input.web.response.ArchiveItemPageResponse
 import com.whale.api.archive.adapter.input.web.response.ArchiveItemResponse
 import com.whale.api.archive.adapter.input.web.response.ArchiveMetadataResponse
 import com.whale.api.archive.adapter.input.web.response.ArchiveResponse
 import com.whale.api.archive.application.port.`in`.CreateArchiveUseCase
 import com.whale.api.archive.application.port.`in`.GetArchiveItemContentUseCase
 import com.whale.api.archive.application.port.`in`.GetArchiveItemsUseCase
-import com.whale.api.archive.application.port.`in`.GetArchiveTagsUseCase
-import com.whale.api.archive.application.port.`in`.ManageArchiveTagsUseCase
+
 import com.whale.api.archive.application.port.`in`.GetArchiveStatusUseCase
 
 import com.whale.api.archive.application.port.`in`.UploadArchiveItemUseCase
@@ -40,8 +40,6 @@ class ArchiveWebController(
     private val uploadArchiveItemUseCase: UploadArchiveItemUseCase,
     private val getArchiveItemsUseCase: GetArchiveItemsUseCase,
     private val getArchiveItemContentUseCase: GetArchiveItemContentUseCase,
-    private val getArchiveTagsUseCase: GetArchiveTagsUseCase,
-    private val manageArchiveTagsUseCase: ManageArchiveTagsUseCase,
     private val objectMapper: ObjectMapper,
 ) {
     private val logger = KotlinLogging.logger {}
@@ -91,7 +89,6 @@ class ArchiveWebController(
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
         originalModifiedDate: OffsetDateTime?,
         @RequestParam("metadata", required = false) metadataJson: String?,
-        @RequestParam("tags", required = false) tagsJson: String?,
     ): ResponseEntity<ArchiveItemResponse> {
         logger.info {
             "Uploading item to archive: $archiveId, " +
@@ -99,8 +96,7 @@ class ArchiveWebController(
             "originalPath: $originalPath, " +
             "isLivePhoto: $isLivePhoto, " +
             "hasLivePhotoVideo: ${livePhotoVideo != null}, " +
-            "metadata: $metadataJson, " +
-            "tags: $tagsJson"
+            "metadata: $metadataJson"
         }
 
         // JSON 문자열을 Map/List로 파싱
@@ -112,15 +108,7 @@ class ArchiveWebController(
             emptyMap<String, String>()
         }
 
-        val tags = try {
-            if (tagsJson.isNullOrBlank()) emptyList()
-            else objectMapper.readValue<List<String>>(tagsJson)
-        } catch (e: Exception) {
-            logger.warn { "Failed to parse tags JSON: $tagsJson" }
-            emptyList<String>()
-        }
-
-        logger.info { "Parsed metadata: $metadata, tags: $tags" }
+        logger.info { "Parsed metadata: $metadata" }
 
         val command = UploadArchiveItemCommand(
             archiveIdentifier = archiveId,
@@ -131,7 +119,6 @@ class ArchiveWebController(
             originalCreatedDate = originalCreatedDate,
             originalModifiedDate = originalModifiedDate,
             metadata = metadata,
-            tags = tags,
         )
 
         val archiveItem = uploadArchiveItemUseCase.uploadItem(command)
@@ -142,11 +129,17 @@ class ArchiveWebController(
     @GetMapping("/{archiveId}/items")
     fun getArchiveItems(
         @PathVariable archiveId: UUID,
-    ): ResponseEntity<List<ArchiveItemResponse>> {
-        logger.info { "Getting archive items: archiveId=$archiveId" }
-        val items = getArchiveItemsUseCase.getArchiveItems(archiveId)
-        logger.info { "Retrieved ${items.size} items for archive: $archiveId" }
-        return ResponseEntity.ok(items.map { ArchiveItemResponse.from(it) })
+        @RequestParam("fileName", required = false) fileName: String?,
+        @RequestParam("cursor", required = false) cursor: String?,
+        @RequestParam("limit", required = false, defaultValue = "20") limit: Int,
+    ): ResponseEntity<ArchiveItemPageResponse> {
+        logger.info { "Getting archive items: archiveId=$archiveId, fileName=$fileName, cursor=$cursor, limit=$limit" }
+
+        val cursorDate = cursor?.let { OffsetDateTime.parse(it) }
+        val page = getArchiveItemsUseCase.getArchiveItems(archiveId, fileName, null, cursorDate, limit)
+
+        logger.info { "Retrieved ${page.items.size} items for archive: $archiveId (hasNext=${page.hasNext}, totalCount=${page.totalCount})" }
+        return ResponseEntity.ok(ArchiveItemPageResponse.from(page.items, page.hasNext, page.totalCount))
     }
 
     @RequireAuth
@@ -214,93 +207,5 @@ class ArchiveWebController(
         return ResponseEntity.ok(mapOf("content" to content, "isPreview" to "true"))
     }
 
-    @RequireAuth
-    @GetMapping("/tags")
-    fun getAllTags(): ResponseEntity<List<Map<String, Any>>> {
-        val tags = getArchiveTagsUseCase.getAllTags()
-        val response = tags.map { tag ->
-            mapOf(
-                "identifier" to tag.identifier,
-                "name" to tag.name,
-                "type" to tag.type,
-                "createdDate" to tag.createdDate
-            )
-        }
-        return ResponseEntity.ok(response)
-    }
 
-    @RequireAuth
-    @GetMapping("/items/{itemId}/tags")
-    fun getArchiveItemTags(
-        @PathVariable itemId: UUID,
-    ): ResponseEntity<List<Map<String, Any>>> {
-        val tags = getArchiveTagsUseCase.getTagsByArchiveItem(itemId)
-        val response = tags.map { tag ->
-            mapOf(
-                "identifier" to tag.identifier,
-                "name" to tag.name,
-                "type" to tag.type,
-                "createdDate" to tag.createdDate
-            )
-        }
-        return ResponseEntity.ok(response)
-    }
-
-    @RequireAuth
-    @PostMapping("/items/{itemId}/tags")
-    fun addTagsToArchiveItem(
-        @PathVariable itemId: UUID,
-        @RequestBody request: Map<String, List<String>>,
-    ): ResponseEntity<List<Map<String, Any>>> {
-        val tagNames = request["tags"] ?: throw IllegalArgumentException("Tags are required")
-        val tags = manageArchiveTagsUseCase.addTagsToArchiveItem(itemId, tagNames)
-        val response = tags.map { tag ->
-            mapOf(
-                "identifier" to tag.identifier,
-                "name" to tag.name,
-                "type" to tag.type,
-                "createdDate" to tag.createdDate
-            )
-        }
-        return ResponseEntity.ok(response)
-    }
-
-    @RequireAuth
-    @PutMapping("/items/{itemId}/tags")
-    fun updateArchiveItemTags(
-        @PathVariable itemId: UUID,
-        @RequestBody request: Map<String, List<String>>,
-    ): ResponseEntity<List<Map<String, Any>>> {
-        val tagNames = request["tags"] ?: emptyList()
-        val tags = manageArchiveTagsUseCase.updateArchiveItemTags(itemId, tagNames)
-        val response = tags.map { tag ->
-            mapOf(
-                "identifier" to tag.identifier,
-                "name" to tag.name,
-                "type" to tag.type,
-                "createdDate" to tag.createdDate
-            )
-        }
-        return ResponseEntity.ok(response)
-    }
-
-    @RequireAuth
-    @DeleteMapping("/items/{itemId}/tags")
-    fun removeTagsFromArchiveItem(
-        @PathVariable itemId: UUID,
-        @RequestBody request: Map<String, List<String>>,
-    ): ResponseEntity<Void> {
-        val tagNames = request["tags"] ?: throw IllegalArgumentException("Tags are required")
-        manageArchiveTagsUseCase.removeTagsFromArchiveItem(itemId, tagNames)
-        return ResponseEntity.ok().build()
-    }
-
-    @RequireAuth
-    @GetMapping("/tags/{tagName}/items")
-    fun getArchiveItemsByTag(
-        @PathVariable tagName: String,
-    ): ResponseEntity<List<UUID>> {
-        val itemIds = getArchiveTagsUseCase.getArchiveItemsByTag(tagName)
-        return ResponseEntity.ok(itemIds)
-    }
 }
