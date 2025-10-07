@@ -63,13 +63,13 @@ class SecurityConfig(
                 // 허용할 Origin 설정
                 allowedOrigins =
                     listOf(
-                        "http://localhost:3000",
                         "https://whale-secretary.kro.kr/",
                     )
                 // 192.168.0.* 대역의 3000 포트 허용
                 allowedOriginPatterns =
                     listOf(
-                        "http://192.168.0.*:3000",
+                        "http://192.168.0.*:*",
+                        "http://localhost:*",
                     )
                 allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                 allowedHeaders = listOf("*")
