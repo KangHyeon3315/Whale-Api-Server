@@ -18,6 +18,8 @@ data class UserEntity(
     val username: String,
     @Column(name = "password", nullable = false)
     val password: String,
+    @Column(name = "token", nullable = true)
+    var token: String?,
     @Column(name = "created_at", nullable = false)
     val createdAt: OffsetDateTime,
     @Column(name = "modified_at", nullable = false)
@@ -28,6 +30,7 @@ data class UserEntity(
             identifier = this.identifier,
             username = this.username,
             password = this.password,
+            token = this.token,
             createdAt = this.createdAt,
             modifiedAt = this.modifiedAt,
         )
@@ -39,6 +42,7 @@ data class UserEntity(
                 identifier = this.identifier,
                 username = this.username,
                 password = this.password,
+                token = this.token,
                 createdAt = this.createdAt,
                 modifiedAt = this.modifiedAt,
             )

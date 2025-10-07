@@ -6,20 +6,25 @@ import com.whale.api.global.jwt.enums.TokenType
 import com.whale.api.global.jwt.exceptions.UnauthorizedException
 import com.whale.api.global.jwt.model.Token
 import com.whale.api.user.application.port.`in`.LoginUserUseCase
+import com.whale.api.user.application.port.`in`.UpdateUserTokenUseCase
 import com.whale.api.user.application.port.out.FindUserOutput
+import com.whale.api.user.application.port.out.SaveUserOutput
 import com.whale.api.user.domain.User
 import com.whale.api.user.domain.dto.LoginResultDto
 import com.whale.api.user.domain.exception.InvalidAccountException
 import mu.KotlinLogging
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
+import java.util.UUID
 
 @Service
 class UserService(
     private val crypter: JwtCrypter,
     private val findUserOutput: FindUserOutput,
+    private val saveUserOutput: SaveUserOutput,
     private val writeTransactionTemplate: TransactionTemplate,
-) : LoginUserUseCase {
+) : LoginUserUseCase,
+    UpdateUserTokenUseCase {
     private val logger = KotlinLogging.logger {}
 
     override fun login(
@@ -89,5 +94,20 @@ class UserService(
             type = TokenType.ACCESS,
             roles = token.roles,
         )
+    }
+
+    override fun updateToken(
+        userIdentifier: UUID,
+        token: String,
+    ) {
+        logger.info("Update token request. userIdentifier: $userIdentifier")
+
+        writeTransactionTemplate.execute {
+            val user = findUserOutput.findByIdentifier(userIdentifier)
+                ?: throw InvalidAccountException()
+
+            user.updateToken(token)
+            saveUserOutput.save(user)
+        }
     }
 }

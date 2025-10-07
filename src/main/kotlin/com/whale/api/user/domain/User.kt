@@ -8,9 +8,15 @@ class User(
     val identifier: UUID,
     val username: String,
     val password: String,
+    var token: String?,
     val createdAt: OffsetDateTime,
     val modifiedAt: OffsetDateTime,
 ) {
+
+    fun updateToken(token: String) {
+        this.token = token
+    }
+
     fun validatePassword(password: String): Boolean {
         return this.password == hashPassword(password)
     }
