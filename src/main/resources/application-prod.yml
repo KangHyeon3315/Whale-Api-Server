@@ -10,7 +10,7 @@ logging:
   config: classpath:logback/logback-prod.xml
 
 file:
-  base-path: /data/file
+  base-path: /app/file
 
 archive:
-  base-path: /data/archive
+  base-path: /app/archive
