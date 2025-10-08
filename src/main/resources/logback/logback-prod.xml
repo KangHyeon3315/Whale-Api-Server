@@ -3,14 +3,14 @@
     <include resource="org/springframework/boot/logging/logback/base.xml" />
 
     <appender name="VECTOR" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-        <destination>whale-vector.whale.svc.cluster.local:1514</destination>
+        <destination>whale-server-whale-vector.whale.svc.cluster.local:1514</destination>
         <port>1514</port>
         <reconnectionDelay>10000</reconnectionDelay>
         <queueSize>512</queueSize>
         <includeCallerData>true</includeCallerData>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <charset>UTF-8</charset>
-            <customFields>{"env":"prod","service":"market-service"}</customFields>
+            <customFields>{"env":"prod","service":"whale-api-server"}</customFields>
         </encoder>
     </appender>
 
