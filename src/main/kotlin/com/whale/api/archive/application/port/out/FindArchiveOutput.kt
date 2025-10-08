@@ -5,5 +5,6 @@ import java.util.UUID
 
 interface FindArchiveOutput {
     fun findArchiveById(identifier: UUID): Archive?
+
     fun findAll(): List<Archive>
 }

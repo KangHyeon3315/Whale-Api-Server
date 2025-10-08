@@ -12,7 +12,6 @@ class User(
     val createdAt: OffsetDateTime,
     val modifiedAt: OffsetDateTime,
 ) {
-
     fun updateToken(token: String) {
         this.token = token
     }

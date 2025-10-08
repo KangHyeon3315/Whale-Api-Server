@@ -5,5 +5,6 @@ import java.util.UUID
 
 interface FindUserOutput {
     fun findByUsername(username: String): User?
+
     fun findByIdentifier(identifier: UUID): User?
 }

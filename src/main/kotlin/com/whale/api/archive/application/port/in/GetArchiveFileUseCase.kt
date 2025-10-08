@@ -4,7 +4,15 @@ import com.whale.api.archive.domain.ArchiveFileResource
 import java.util.UUID
 
 interface GetArchiveFileUseCase {
-    fun getArchiveFile(itemIdentifier: UUID, rangeHeader: String? = null): ArchiveFileResource
+    fun getArchiveFile(
+        itemIdentifier: UUID,
+        rangeHeader: String? = null,
+    ): ArchiveFileResource
+
     fun getArchiveFileThumbnail(itemIdentifier: UUID): ArchiveFileResource
-    fun getLivePhotoVideo(itemIdentifier: UUID, rangeHeader: String? = null): ArchiveFileResource
+
+    fun getLivePhotoVideo(
+        itemIdentifier: UUID,
+        rangeHeader: String? = null,
+    ): ArchiveFileResource
 }

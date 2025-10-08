@@ -9,5 +9,5 @@ enum class MetadataType {
     TEXT_CONTENT,
     DOCUMENT_PROPERTIES,
     FILE_ENCODING,
-    CUSTOM
+    CUSTOM,
 }

@@ -11,14 +11,13 @@ import org.springframework.web.multipart.MultipartFile
 import java.awt.image.BufferedImage
 import java.io.FileInputStream
 import java.io.InputStream
-import java.util.UUID
-import java.util.regex.Pattern
-import javax.imageio.ImageIO
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
+import java.util.UUID
+import java.util.regex.Pattern
+import javax.imageio.ImageIO
 
 @Repository
 class ArchiveFileAdapter(
@@ -26,10 +25,12 @@ class ArchiveFileAdapter(
 ) : FileStorageOutput,
     ReadArchiveItemContentOutput,
     ReadArchiveFileOutput {
-
     private val logger = KotlinLogging.logger {}
 
-    override fun storeFile(file: MultipartFile, relativePath: String): String {
+    override fun storeFile(
+        file: MultipartFile,
+        relativePath: String,
+    ): String {
         val targetPath = Paths.get(archiveProperty.basePath, relativePath, file.originalFilename ?: "unknown")
 
         try {
@@ -49,7 +50,11 @@ class ArchiveFileAdapter(
         }
     }
 
-    override fun storeFile(inputStream: InputStream, fileName: String, relativePath: String): String {
+    override fun storeFile(
+        inputStream: InputStream,
+        fileName: String,
+        relativePath: String,
+    ): String {
         val targetPath = Paths.get(archiveProperty.basePath, relativePath, fileName)
 
         try {
@@ -78,8 +83,6 @@ class ArchiveFileAdapter(
             false
         }
     }
-
-
 
     override fun getFileSize(filePath: String): Long {
         return try {
@@ -123,7 +126,10 @@ class ArchiveFileAdapter(
         }
     }
 
-    override fun readTextContentPreview(storedPath: String, maxLength: Int): String {
+    override fun readTextContentPreview(
+        storedPath: String,
+        maxLength: Int,
+    ): String {
         return try {
             val path = Paths.get(storedPath)
             val content = Files.readString(path, Charsets.UTF_8)
@@ -143,7 +149,11 @@ class ArchiveFileAdapter(
     }
 
     // ReadArchiveFileOutput 구현
-    override fun readArchiveFile(storedPath: String, fileName: String, mimeType: String): ArchiveFileResource {
+    override fun readArchiveFile(
+        storedPath: String,
+        fileName: String,
+        mimeType: String,
+    ): ArchiveFileResource {
         val file = Paths.get(storedPath).toFile()
 
         if (!file.exists()) {
@@ -151,7 +161,8 @@ class ArchiveFileAdapter(
         }
 
         return ArchiveFileResource(
-            itemIdentifier = UUID.randomUUID().toString(), // 실제로는 파라미터로 받아야 함
+            // 실제로는 파라미터로 받아야 함
+            itemIdentifier = UUID.randomUUID().toString(),
             fileName = fileName,
             mimeType = mimeType,
             size = file.length(),
@@ -159,7 +170,12 @@ class ArchiveFileAdapter(
         )
     }
 
-    override fun readArchiveFileWithRange(storedPath: String, fileName: String, mimeType: String, rangeHeader: String): ArchiveFileResource {
+    override fun readArchiveFileWithRange(
+        storedPath: String,
+        fileName: String,
+        mimeType: String,
+        rangeHeader: String,
+    ): ArchiveFileResource {
         val file = Paths.get(storedPath).toFile()
 
         if (!file.exists()) {
@@ -196,7 +212,10 @@ class ArchiveFileAdapter(
         )
     }
 
-    override fun createThumbnail(storedPath: String, mimeType: String): String {
+    override fun createThumbnail(
+        storedPath: String,
+        mimeType: String,
+    ): String {
         val thumbnailDir = Paths.get(archiveProperty.basePath, archiveProperty.thumbnailPath)
         Files.createDirectories(thumbnailDir)
 
@@ -227,7 +246,10 @@ class ArchiveFileAdapter(
         }
     }
 
-    private fun createImageThumbnail(imagePath: String, thumbnailPath: String) {
+    private fun createImageThumbnail(
+        imagePath: String,
+        thumbnailPath: String,
+    ) {
         val originalImage = ImageIO.read(Paths.get(imagePath).toFile())
         val thumbnailSize = 200
 
@@ -241,17 +263,21 @@ class ArchiveFileAdapter(
         ImageIO.write(thumbnailImage, "jpg", Paths.get(thumbnailPath).toFile())
     }
 
-    private fun createVideoThumbnail(videoPath: String, thumbnailPath: String) {
+    private fun createVideoThumbnail(
+        videoPath: String,
+        thumbnailPath: String,
+    ) {
         // FFmpeg를 사용한 비디오 썸네일 생성
-        val processBuilder = ProcessBuilder(
-            "ffmpeg",
-            "-i", videoPath,
-            "-ss", "00:00:01.000",
-            "-vframes", "1",
-            "-s", "200x200",
-            "-y",
-            thumbnailPath
-        )
+        val processBuilder =
+            ProcessBuilder(
+                "ffmpeg",
+                "-i", videoPath,
+                "-ss", "00:00:01.000",
+                "-vframes", "1",
+                "-s", "200x200",
+                "-y",
+                thumbnailPath,
+            )
 
         val process = processBuilder.start()
         val exitCode = process.waitFor()
@@ -261,7 +287,10 @@ class ArchiveFileAdapter(
         }
     }
 
-    override fun readThumbnail(thumbnailPath: String, fileName: String): ArchiveFileResource {
+    override fun readThumbnail(
+        thumbnailPath: String,
+        fileName: String,
+    ): ArchiveFileResource {
         val file = Paths.get(thumbnailPath).toFile()
 
         if (!file.exists()) {

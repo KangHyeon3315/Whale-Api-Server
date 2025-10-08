@@ -13,14 +13,17 @@ class ArchiveFileQueryService(
     private val findArchiveItemOutput: FindArchiveItemOutput,
     private val readArchiveFileOutput: ReadArchiveFileOutput,
 ) : GetArchiveFileUseCase {
-
     private val logger = KotlinLogging.logger {}
 
-    override fun getArchiveFile(itemIdentifier: UUID, rangeHeader: String?): ArchiveFileResource {
+    override fun getArchiveFile(
+        itemIdentifier: UUID,
+        rangeHeader: String?,
+    ): ArchiveFileResource {
         logger.debug { "Getting archive file: $itemIdentifier, rangeHeader: $rangeHeader" }
 
-        val archiveItem = findArchiveItemOutput.findArchiveItemById(itemIdentifier)
-            ?: throw IllegalArgumentException("Archive item not found: $itemIdentifier")
+        val archiveItem =
+            findArchiveItemOutput.findArchiveItemById(itemIdentifier)
+                ?: throw IllegalArgumentException("Archive item not found: $itemIdentifier")
 
         // 파일 경로 검증
         if (!readArchiveFileOutput.validateFilePath(archiveItem.storedPath)) {
@@ -32,13 +35,13 @@ class ArchiveFileQueryService(
                 archiveItem.storedPath,
                 archiveItem.fileName,
                 archiveItem.mimeType,
-                rangeHeader
+                rangeHeader,
             )
         } else {
             readArchiveFileOutput.readArchiveFile(
                 archiveItem.storedPath,
                 archiveItem.fileName,
-                archiveItem.mimeType
+                archiveItem.mimeType,
             )
         }
     }
@@ -46,12 +49,14 @@ class ArchiveFileQueryService(
     override fun getArchiveFileThumbnail(itemIdentifier: UUID): ArchiveFileResource {
         logger.debug { "Getting archive file thumbnail: $itemIdentifier" }
 
-        val archiveItem = findArchiveItemOutput.findArchiveItemById(itemIdentifier)
-            ?: throw IllegalArgumentException("Archive item not found: $itemIdentifier")
+        val archiveItem =
+            findArchiveItemOutput.findArchiveItemById(itemIdentifier)
+                ?: throw IllegalArgumentException("Archive item not found: $itemIdentifier")
 
         // 이미지나 비디오 파일만 썸네일 생성 가능
-        if (!readArchiveFileOutput.isImageFile(archiveItem.mimeType) && 
-            !readArchiveFileOutput.isVideoFile(archiveItem.mimeType)) {
+        if (!readArchiveFileOutput.isImageFile(archiveItem.mimeType) &&
+            !readArchiveFileOutput.isVideoFile(archiveItem.mimeType)
+        ) {
             throw IllegalArgumentException("Thumbnail not supported for file type: ${archiveItem.mimeType}")
         }
 
@@ -61,11 +66,15 @@ class ArchiveFileQueryService(
         return readArchiveFileOutput.readThumbnail(thumbnailPath, "${archiveItem.fileName}_thumb.jpg")
     }
 
-    override fun getLivePhotoVideo(itemIdentifier: UUID, rangeHeader: String?): ArchiveFileResource {
+    override fun getLivePhotoVideo(
+        itemIdentifier: UUID,
+        rangeHeader: String?,
+    ): ArchiveFileResource {
         logger.debug { "Getting live photo video: $itemIdentifier, rangeHeader: $rangeHeader" }
 
-        val archiveItem = findArchiveItemOutput.findArchiveItemById(itemIdentifier)
-            ?: throw IllegalArgumentException("Archive item not found: $itemIdentifier")
+        val archiveItem =
+            findArchiveItemOutput.findArchiveItemById(itemIdentifier)
+                ?: throw IllegalArgumentException("Archive item not found: $itemIdentifier")
 
         if (!archiveItem.isLivePhoto || archiveItem.livePhotoVideoPath == null) {
             throw IllegalArgumentException("Item is not a live photo or video path not found: $itemIdentifier")
@@ -83,13 +92,13 @@ class ArchiveFileQueryService(
                 archiveItem.livePhotoVideoPath,
                 videoFileName,
                 "video/quicktime",
-                rangeHeader
+                rangeHeader,
             )
         } else {
             readArchiveFileOutput.readArchiveFile(
                 archiveItem.livePhotoVideoPath,
                 videoFileName,
-                "video/quicktime"
+                "video/quicktime",
             )
         }
     }

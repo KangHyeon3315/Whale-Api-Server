@@ -9,7 +9,6 @@ import com.whale.api.archive.application.port.out.FileStorageOutput
 import com.whale.api.archive.application.port.out.FindArchiveItemOutput
 import com.whale.api.archive.application.port.out.FindArchiveMetadataOutput
 import com.whale.api.archive.application.port.out.FindArchiveOutput
-
 import com.whale.api.archive.application.port.out.MetadataExtractionOutput
 import com.whale.api.archive.application.port.out.ReadArchiveItemContentOutput
 import com.whale.api.archive.application.port.out.SaveArchiveItemOutput
@@ -36,12 +35,10 @@ class ArchiveItemService(
     private val metadataExtractionOutput: MetadataExtractionOutput,
     private val archiveProperty: ArchiveProperty,
     private val readArchiveItemContentOutput: ReadArchiveItemContentOutput,
-
     private val writeTransactionTemplate: TransactionTemplate,
 ) : UploadArchiveItemUseCase,
     GetArchiveItemsUseCase,
     GetArchiveItemContentUseCase {
-
     private val logger = KotlinLogging.logger {}
 
     override fun uploadItem(command: UploadArchiveItemCommand): ArchiveItem {
@@ -49,8 +46,9 @@ class ArchiveItemService(
 
         return writeTransactionTemplate.execute {
             // 1. Archive 존재 확인
-            val archive = findArchiveOutput.findArchiveById(command.archiveIdentifier)
-                ?: throw IllegalArgumentException("Archive not found: ${command.archiveIdentifier}")
+            val archive =
+                findArchiveOutput.findArchiveById(command.archiveIdentifier)
+                    ?: throw IllegalArgumentException("Archive not found: ${command.archiveIdentifier}")
 
             // 2. 파일 확장자 검증
             val fileName = command.file.originalFilename ?: throw IllegalArgumentException("File name is required")
@@ -80,42 +78,44 @@ class ArchiveItemService(
             val checksum = fileStorageOutput.calculateChecksum(command.file)
 
             // 7. ArchiveItem 생성
-            val archiveItem = ArchiveItem(
-                identifier = UUID.randomUUID(),
-                archiveIdentifier = command.archiveIdentifier,
-                originalPath = command.originalPath,
-                storedPath = storedPath,
-                fileName = fileName,
-                fileSize = command.file.size,
-                mimeType = archiveProperty.getMimeType(".$extension"),
-                isLivePhoto = command.isLivePhoto,
-                livePhotoVideoPath = livePhotoVideoPath,
-                checksum = checksum,
-                originalCreatedDate = command.originalCreatedDate,
-                originalModifiedDate = command.originalModifiedDate,
-                createdDate = OffsetDateTime.now(),
-                modifiedDate = OffsetDateTime.now(),
-            )
+            val archiveItem =
+                ArchiveItem(
+                    identifier = UUID.randomUUID(),
+                    archiveIdentifier = command.archiveIdentifier,
+                    originalPath = command.originalPath,
+                    storedPath = storedPath,
+                    fileName = fileName,
+                    fileSize = command.file.size,
+                    mimeType = archiveProperty.getMimeType(".$extension"),
+                    isLivePhoto = command.isLivePhoto,
+                    livePhotoVideoPath = livePhotoVideoPath,
+                    checksum = checksum,
+                    originalCreatedDate = command.originalCreatedDate,
+                    originalModifiedDate = command.originalModifiedDate,
+                    createdDate = OffsetDateTime.now(),
+                    modifiedDate = OffsetDateTime.now(),
+                )
 
             val savedItem = saveArchiveItemOutput.save(archiveItem)
 
             // 8. 메타데이터 추출 및 저장
             try {
-                val extractedMetadata = if (command.isLivePhoto && command.livePhotoVideo != null) {
-                    metadataExtractionOutput.extractLivePhotoMetadata(
-                        command.file,
-                        command.livePhotoVideo,
-                        savedItem.identifier
-                    )
-                } else {
-                    metadataExtractionOutput.extractMetadata(command.file, savedItem.identifier)
-                }
+                val extractedMetadata =
+                    if (command.isLivePhoto && command.livePhotoVideo != null) {
+                        metadataExtractionOutput.extractLivePhotoMetadata(
+                            command.file,
+                            command.livePhotoVideo,
+                            savedItem.identifier,
+                        )
+                    } else {
+                        metadataExtractionOutput.extractMetadata(command.file, savedItem.identifier)
+                    }
 
                 // 추가 메타데이터가 있으면 함께 저장
                 val allMetadata = extractedMetadata.toMutableList()
                 command.metadata.forEach { (key, value) ->
                     allMetadata.add(
-                        ArchiveMetadata.createCustomMetadata(savedItem.identifier, key, value)
+                        ArchiveMetadata.createCustomMetadata(savedItem.identifier, key, value),
                     )
                 }
 
@@ -131,7 +131,10 @@ class ArchiveItemService(
             saveArchiveOutput.save(archive)
 
             if (isCompleted) {
-                logger.info { "Archive automatically completed: ${archive.identifier} (${archive.processedItems}/${archive.totalItems} items processed)" }
+                logger.info {
+                    "Archive automatically completed: ${archive.identifier} " +
+                        "(${archive.processedItems}/${archive.totalItems} items processed)"
+                }
             }
 
             savedItem
@@ -142,7 +145,11 @@ class ArchiveItemService(
         return findArchiveItemOutput.findByArchiveIdentifier(archiveIdentifier)
     }
 
-    override fun getArchiveItems(archiveIdentifier: UUID, fileName: String?, tags: List<String>?): List<ArchiveItem> {
+    override fun getArchiveItems(
+        archiveIdentifier: UUID,
+        fileName: String?,
+        tags: List<String>?,
+    ): List<ArchiveItem> {
         logger.info { "Searching archive items: archiveId=$archiveIdentifier, fileName=$fileName, tags=$tags" }
         return findArchiveItemOutput.findByArchiveIdentifierWithFilters(archiveIdentifier, fileName, tags)
     }
@@ -152,14 +159,22 @@ class ArchiveItemService(
         fileName: String?,
         tags: List<String>?,
         cursor: OffsetDateTime?,
-        limit: Int
+        limit: Int,
     ): ArchiveItemPage {
-        logger.info { "Searching archive items with pagination: archiveId=$archiveIdentifier, fileName=$fileName, tags=$tags, cursor=$cursor, limit=$limit" }
+        logger.info {
+            "Searching archive items with pagination: archiveId=$archiveIdentifier, fileName=$fileName, " +
+                "tags=$tags, cursor=$cursor, limit=$limit"
+        }
 
         // limit + 1로 조회해서 hasNext 판단
-        val items = findArchiveItemOutput.findByArchiveIdentifierWithFiltersAndPagination(
-            archiveIdentifier, fileName, tags, cursor, limit + 1
-        )
+        val items =
+            findArchiveItemOutput.findByArchiveIdentifierWithFiltersAndPagination(
+                archiveIdentifier,
+                fileName,
+                tags,
+                cursor,
+                limit + 1,
+            )
 
         val hasNext = items.size > limit
         val resultItems = if (hasNext) items.dropLast(1) else items
@@ -171,7 +186,7 @@ class ArchiveItemService(
         return ArchiveItemPage(
             items = resultItems,
             hasNext = hasNext,
-            totalCount = totalCount
+            totalCount = totalCount,
         )
     }
 
@@ -185,8 +200,9 @@ class ArchiveItemService(
     }
 
     override fun getTextContent(itemIdentifier: UUID): String {
-        val item = findArchiveItemOutput.findArchiveItemById(itemIdentifier)
-            ?: throw IllegalArgumentException("Archive item not found: $itemIdentifier")
+        val item =
+            findArchiveItemOutput.findArchiveItemById(itemIdentifier)
+                ?: throw IllegalArgumentException("Archive item not found: $itemIdentifier")
 
         if (!item.isText()) {
             throw IllegalArgumentException("Item is not a text file: $itemIdentifier")
@@ -199,9 +215,13 @@ class ArchiveItemService(
         return readArchiveItemContentOutput.readTextContent(item.storedPath)
     }
 
-    override fun getTextContentPreview(itemIdentifier: UUID, maxLength: Int): String {
-        val item = findArchiveItemOutput.findArchiveItemById(itemIdentifier)
-            ?: throw IllegalArgumentException("Archive item not found: $itemIdentifier")
+    override fun getTextContentPreview(
+        itemIdentifier: UUID,
+        maxLength: Int,
+    ): String {
+        val item =
+            findArchiveItemOutput.findArchiveItemById(itemIdentifier)
+                ?: throw IllegalArgumentException("Archive item not found: $itemIdentifier")
 
         if (!item.isText()) {
             throw IllegalArgumentException("Item is not a text file: $itemIdentifier")

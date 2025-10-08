@@ -2,7 +2,6 @@ package com.whale.api.archive.adapter.output.file
 
 import com.whale.api.archive.application.port.out.MetadataExtractionOutput
 import com.whale.api.archive.domain.ArchiveMetadata
-import com.whale.api.archive.domain.enums.MetadataType
 import com.whale.api.archive.domain.property.ArchiveProperty
 import mu.KotlinLogging
 import org.springframework.stereotype.Repository
@@ -15,10 +14,12 @@ import javax.imageio.metadata.IIOMetadata
 class MetadataExtractor(
     private val archiveProperty: ArchiveProperty,
 ) : MetadataExtractionOutput {
-
     private val logger = KotlinLogging.logger {}
 
-    override fun extractMetadata(file: MultipartFile, archiveItemIdentifier: UUID): List<ArchiveMetadata> {
+    override fun extractMetadata(
+        file: MultipartFile,
+        archiveItemIdentifier: UUID,
+    ): List<ArchiveMetadata> {
         val fileName = file.originalFilename ?: return emptyList()
         val extension = fileName.substringAfterLast('.', "")
 
@@ -31,7 +32,10 @@ class MetadataExtractor(
         }
     }
 
-    override fun extractImageMetadata(file: MultipartFile, archiveItemIdentifier: UUID): List<ArchiveMetadata> {
+    override fun extractImageMetadata(
+        file: MultipartFile,
+        archiveItemIdentifier: UUID,
+    ): List<ArchiveMetadata> {
         val metadataList = mutableListOf<ArchiveMetadata>()
 
         try {
@@ -56,7 +60,10 @@ class MetadataExtractor(
         return metadataList
     }
 
-    override fun extractVideoMetadata(file: MultipartFile, archiveItemIdentifier: UUID): List<ArchiveMetadata> {
+    override fun extractVideoMetadata(
+        file: MultipartFile,
+        archiveItemIdentifier: UUID,
+    ): List<ArchiveMetadata> {
         val metadataList = mutableListOf<ArchiveMetadata>()
 
         try {
@@ -65,21 +72,20 @@ class MetadataExtractor(
                 ArchiveMetadata.createCustomMetadata(
                     archiveItemIdentifier,
                     "file_size",
-                    file.size.toString()
-                )
+                    file.size.toString(),
+                ),
             )
 
             metadataList.add(
                 ArchiveMetadata.createCustomMetadata(
                     archiveItemIdentifier,
                     "content_type",
-                    file.contentType ?: "unknown"
-                )
+                    file.contentType ?: "unknown",
+                ),
             )
 
             // TODO: FFmpeg를 사용한 비디오 메타데이터 추출 구현
             // 현재는 기본 정보만 추출
-
         } catch (e: Exception) {
             logger.warn(e) { "Failed to extract video metadata for item: $archiveItemIdentifier" }
         }
@@ -102,8 +108,8 @@ class MetadataExtractor(
             ArchiveMetadata.createLivePhotoMetadata(
                 archiveItemIdentifier,
                 "is_live_photo",
-                "true"
-            )
+                "true",
+            ),
         )
 
         if (videoFile != null) {
@@ -111,16 +117,16 @@ class MetadataExtractor(
                 ArchiveMetadata.createLivePhotoMetadata(
                     archiveItemIdentifier,
                     "video_file_size",
-                    videoFile.size.toString()
-                )
+                    videoFile.size.toString(),
+                ),
             )
 
             metadataList.add(
                 ArchiveMetadata.createLivePhotoMetadata(
                     archiveItemIdentifier,
                     "video_content_type",
-                    videoFile.contentType ?: "unknown"
-                )
+                    videoFile.contentType ?: "unknown",
+                ),
             )
         }
 
@@ -161,8 +167,8 @@ class MetadataExtractor(
                         ArchiveMetadata.createExifMetadata(
                             archiveItemIdentifier,
                             key,
-                            value
-                        )
+                            value,
+                        ),
                     )
                 }
             }
@@ -177,7 +183,10 @@ class MetadataExtractor(
         }
     }
 
-    override fun extractTextMetadata(file: MultipartFile, archiveItemIdentifier: UUID): List<ArchiveMetadata> {
+    override fun extractTextMetadata(
+        file: MultipartFile,
+        archiveItemIdentifier: UUID,
+    ): List<ArchiveMetadata> {
         val metadataList = mutableListOf<ArchiveMetadata>()
 
         try {
@@ -195,8 +204,8 @@ class MetadataExtractor(
                         ArchiveMetadata.createFileEncodingMetadata(
                             archiveItemIdentifier,
                             "encoding",
-                            encoding
-                        )
+                            encoding,
+                        ),
                     )
                 }
 
@@ -205,41 +214,42 @@ class MetadataExtractor(
                     ArchiveMetadata.createTextContentMetadata(
                         archiveItemIdentifier,
                         "character_count",
-                        content.length.toString()
-                    )
+                        content.length.toString(),
+                    ),
                 )
 
                 metadataList.add(
                     ArchiveMetadata.createTextContentMetadata(
                         archiveItemIdentifier,
                         "line_count",
-                        content.lines().size.toString()
-                    )
+                        content.lines().size.toString(),
+                    ),
                 )
 
                 metadataList.add(
                     ArchiveMetadata.createTextContentMetadata(
                         archiveItemIdentifier,
                         "word_count",
-                        content.split("\\s+".toRegex()).size.toString()
-                    )
+                        content.split("\\s+".toRegex()).size.toString(),
+                    ),
                 )
 
                 // JSON 파일의 경우 구조 분석
                 if (file.originalFilename?.endsWith(".json") == true) {
                     try {
                         // JSON 유효성 검사 (간단한 방법)
-                        val isValidJson = content.trim().let {
-                            (it.startsWith("{") && it.endsWith("}")) ||
-                            (it.startsWith("[") && it.endsWith("]"))
-                        }
+                        val isValidJson =
+                            content.trim().let {
+                                (it.startsWith("{") && it.endsWith("}")) ||
+                                    (it.startsWith("[") && it.endsWith("]"))
+                            }
 
                         metadataList.add(
                             ArchiveMetadata.createTextContentMetadata(
                                 archiveItemIdentifier,
                                 "is_valid_json",
-                                isValidJson.toString()
-                            )
+                                isValidJson.toString(),
+                            ),
                         )
                     } catch (e: Exception) {
                         logger.warn(e) { "Failed to analyze JSON structure" }
@@ -253,7 +263,10 @@ class MetadataExtractor(
         return metadataList
     }
 
-    override fun extractDocumentMetadata(file: MultipartFile, archiveItemIdentifier: UUID): List<ArchiveMetadata> {
+    override fun extractDocumentMetadata(
+        file: MultipartFile,
+        archiveItemIdentifier: UUID,
+    ): List<ArchiveMetadata> {
         val metadataList = mutableListOf<ArchiveMetadata>()
 
         try {
@@ -268,8 +281,8 @@ class MetadataExtractor(
                 ArchiveMetadata.createDocumentPropertiesMetadata(
                     archiveItemIdentifier,
                     "document_type",
-                    extension
-                )
+                    extension,
+                ),
             )
 
             // TODO: Apache POI나 다른 라이브러리를 사용하여 문서 메타데이터 추출
@@ -280,8 +293,8 @@ class MetadataExtractor(
                         ArchiveMetadata.createDocumentPropertiesMetadata(
                             archiveItemIdentifier,
                             "document_format",
-                            "Portable Document Format"
-                        )
+                            "Portable Document Format",
+                        ),
                     )
                 }
                 "doc", "docx" -> {
@@ -289,8 +302,8 @@ class MetadataExtractor(
                         ArchiveMetadata.createDocumentPropertiesMetadata(
                             archiveItemIdentifier,
                             "document_format",
-                            "Microsoft Word Document"
-                        )
+                            "Microsoft Word Document",
+                        ),
                     )
                 }
                 "xls", "xlsx" -> {
@@ -298,8 +311,8 @@ class MetadataExtractor(
                         ArchiveMetadata.createDocumentPropertiesMetadata(
                             archiveItemIdentifier,
                             "document_format",
-                            "Microsoft Excel Spreadsheet"
-                        )
+                            "Microsoft Excel Spreadsheet",
+                        ),
                     )
                 }
                 "ppt", "pptx" -> {
@@ -307,8 +320,8 @@ class MetadataExtractor(
                         ArchiveMetadata.createDocumentPropertiesMetadata(
                             archiveItemIdentifier,
                             "document_format",
-                            "Microsoft PowerPoint Presentation"
-                        )
+                            "Microsoft PowerPoint Presentation",
+                        ),
                     )
                 }
             }
@@ -319,7 +332,10 @@ class MetadataExtractor(
         return metadataList
     }
 
-    private fun extractBasicFileMetadata(file: MultipartFile, archiveItemIdentifier: UUID): List<ArchiveMetadata> {
+    private fun extractBasicFileMetadata(
+        file: MultipartFile,
+        archiveItemIdentifier: UUID,
+    ): List<ArchiveMetadata> {
         val metadataList = mutableListOf<ArchiveMetadata>()
 
         try {
@@ -327,24 +343,24 @@ class MetadataExtractor(
                 ArchiveMetadata.createCustomMetadata(
                     archiveItemIdentifier,
                     "file_size",
-                    file.size.toString()
-                )
+                    file.size.toString(),
+                ),
             )
 
             metadataList.add(
                 ArchiveMetadata.createCustomMetadata(
                     archiveItemIdentifier,
                     "content_type",
-                    file.contentType ?: "unknown"
-                )
+                    file.contentType ?: "unknown",
+                ),
             )
 
             metadataList.add(
                 ArchiveMetadata.createCustomMetadata(
                     archiveItemIdentifier,
                     "original_filename",
-                    file.originalFilename ?: "unknown"
-                )
+                    file.originalFilename ?: "unknown",
+                ),
             )
         } catch (e: Exception) {
             logger.warn(e) { "Failed to extract basic file metadata" }
@@ -361,13 +377,13 @@ class MetadataExtractor(
                 // 간단한 인코딩 감지 (BOM 체크)
                 when {
                     bytes.size >= 3 && bytes[0] == 0xEF.toByte() &&
-                    bytes[1] == 0xBB.toByte() && bytes[2] == 0xBF.toByte() -> "UTF-8"
+                        bytes[1] == 0xBB.toByte() && bytes[2] == 0xBF.toByte() -> "UTF-8"
 
                     bytes.size >= 2 && bytes[0] == 0xFF.toByte() &&
-                    bytes[1] == 0xFE.toByte() -> "UTF-16LE"
+                        bytes[1] == 0xFE.toByte() -> "UTF-16LE"
 
                     bytes.size >= 2 && bytes[0] == 0xFE.toByte() &&
-                    bytes[1] == 0xFF.toByte() -> "UTF-16BE"
+                        bytes[1] == 0xFF.toByte() -> "UTF-16BE"
 
                     else -> {
                         // ASCII 체크

@@ -5,5 +5,6 @@ import java.util.UUID
 
 interface GetArchiveStatusUseCase {
     fun getArchive(archiveIdentifier: UUID): Archive
+
     fun getAllArchives(): List<Archive>
 }

@@ -67,16 +67,18 @@ class ArchiveItem(
 
     fun isText(): Boolean {
         return mimeType.startsWith("text/") ||
-               mimeType == "application/json" ||
-               mimeType == "application/xml"
+            mimeType == "application/json" ||
+            mimeType == "application/xml"
     }
 
     fun isDocument(): Boolean {
         return mimeType.startsWith("application/") &&
-               (mimeType.contains("word") ||
-                mimeType.contains("excel") ||
-                mimeType.contains("powerpoint") ||
-                mimeType.contains("pdf"))
+            (
+                mimeType.contains("word") ||
+                    mimeType.contains("excel") ||
+                    mimeType.contains("powerpoint") ||
+                    mimeType.contains("pdf")
+            )
     }
 
     fun getFileExtension(): String {

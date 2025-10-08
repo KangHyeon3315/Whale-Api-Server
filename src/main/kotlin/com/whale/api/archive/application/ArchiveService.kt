@@ -19,23 +19,23 @@ class ArchiveService(
     private val writeTransactionTemplate: TransactionTemplate,
 ) : CreateArchiveUseCase,
     GetArchiveStatusUseCase {
-
     private val logger = KotlinLogging.logger {}
 
     override fun createArchive(command: CreateArchiveCommand): Archive {
         logger.info { "Creating new archive: ${command.name}" }
 
-        val archive = Archive(
-            identifier = UUID.randomUUID(),
-            name = command.name,
-            description = command.description,
-            totalItems = command.totalItems,
-            processedItems = 0,
-            failedItems = 0,
-            createdDate = OffsetDateTime.now(),
-            modifiedDate = OffsetDateTime.now(),
-            completedDate = null,
-        )
+        val archive =
+            Archive(
+                identifier = UUID.randomUUID(),
+                name = command.name,
+                description = command.description,
+                totalItems = command.totalItems,
+                processedItems = 0,
+                failedItems = 0,
+                createdDate = OffsetDateTime.now(),
+                modifiedDate = OffsetDateTime.now(),
+                completedDate = null,
+            )
 
         return writeTransactionTemplate.execute {
             saveArchiveOutput.save(archive)

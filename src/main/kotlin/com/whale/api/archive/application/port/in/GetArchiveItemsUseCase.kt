@@ -13,14 +13,22 @@ data class ArchiveItemPage(
 
 interface GetArchiveItemsUseCase {
     fun getArchiveItems(archiveIdentifier: UUID): List<ArchiveItem>
-    fun getArchiveItems(archiveIdentifier: UUID, fileName: String?, tags: List<String>?): List<ArchiveItem>
+
+    fun getArchiveItems(
+        archiveIdentifier: UUID,
+        fileName: String?,
+        tags: List<String>?,
+    ): List<ArchiveItem>
+
     fun getArchiveItems(
         archiveIdentifier: UUID,
         fileName: String?,
         tags: List<String>?,
         cursor: OffsetDateTime?,
-        limit: Int
+        limit: Int,
     ): ArchiveItemPage
+
     fun getArchiveItem(itemIdentifier: UUID): ArchiveItem
+
     fun getArchiveItemMetadata(itemIdentifier: UUID): List<ArchiveMetadata>
 }

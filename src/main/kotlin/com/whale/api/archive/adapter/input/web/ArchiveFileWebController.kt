@@ -2,6 +2,7 @@ package com.whale.api.archive.adapter.input.web
 
 import com.whale.api.archive.application.port.`in`.GetArchiveFileUseCase
 import com.whale.api.global.annotation.RequireAuth
+import jakarta.servlet.http.HttpServletRequest
 import mu.KotlinLogging
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -13,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody
 import java.io.OutputStream
 import java.util.UUID
-import jakarta.servlet.http.HttpServletRequest
 
 @RestController
 @RequestMapping("/archives")
@@ -34,19 +34,26 @@ class ArchiveFileWebController(
 
         val fileResource = getArchiveFileUseCase.getArchiveFile(itemId, rangeHeader)
 
-        logger.info { "Serving archive file: ${fileResource.fileName} (${fileResource.size} bytes), mimeType=${fileResource.mimeType}, isPartial=${fileResource.isPartialContent()}" }
-
-        val streamingResponseBody = StreamingResponseBody { outputStream ->
-            generateFileStream(fileResource, outputStream)
+        logger.info {
+            "Serving archive file: ${fileResource.fileName} (${fileResource.size} bytes), " +
+                "mimeType=${fileResource.mimeType}, isPartial=${fileResource.isPartialContent()}"
         }
 
-        val responseBuilder = if (fileResource.isPartialContent()) {
-            ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
-                .header(HttpHeaders.CONTENT_RANGE,
-                    "bytes ${fileResource.rangeStart}-${fileResource.rangeEnd}/${fileResource.size}")
-        } else {
-            ResponseEntity.ok()
-        }
+        val streamingResponseBody =
+            StreamingResponseBody { outputStream ->
+                generateFileStream(fileResource, outputStream)
+            }
+
+        val responseBuilder =
+            if (fileResource.isPartialContent()) {
+                ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                    .header(
+                        HttpHeaders.CONTENT_RANGE,
+                        "bytes ${fileResource.rangeStart}-${fileResource.rangeEnd}/${fileResource.size}",
+                    )
+            } else {
+                ResponseEntity.ok()
+            }
 
         return responseBuilder
             .header(HttpHeaders.CONTENT_TYPE, fileResource.mimeType)
@@ -68,11 +75,12 @@ class ArchiveFileWebController(
 
         logger.info { "Serving thumbnail: ${fileResource.fileName} (${fileResource.size} bytes), mimeType=${fileResource.mimeType}" }
 
-        val streamingResponseBody = StreamingResponseBody { outputStream ->
-            fileResource.inputStream.use { inputStream ->
-                inputStream.copyTo(outputStream)
+        val streamingResponseBody =
+            StreamingResponseBody { outputStream ->
+                fileResource.inputStream.use { inputStream ->
+                    inputStream.copyTo(outputStream)
+                }
             }
-        }
 
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_TYPE, fileResource.mimeType)
@@ -93,19 +101,26 @@ class ArchiveFileWebController(
 
         val fileResource = getArchiveFileUseCase.getLivePhotoVideo(itemId, rangeHeader)
 
-        logger.info { "Serving live photo video: ${fileResource.fileName} (${fileResource.size} bytes), mimeType=${fileResource.mimeType}, isPartial=${fileResource.isPartialContent()}" }
-
-        val streamingResponseBody = StreamingResponseBody { outputStream ->
-            generateFileStream(fileResource, outputStream)
+        logger.info {
+            "Serving live photo video: ${fileResource.fileName} (${fileResource.size} bytes), " +
+                "mimeType=${fileResource.mimeType}, isPartial=${fileResource.isPartialContent()}"
         }
 
-        val responseBuilder = if (fileResource.isPartialContent()) {
-            ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
-                .header(HttpHeaders.CONTENT_RANGE,
-                    "bytes ${fileResource.rangeStart}-${fileResource.rangeEnd}/${fileResource.size}")
-        } else {
-            ResponseEntity.ok()
-        }
+        val streamingResponseBody =
+            StreamingResponseBody { outputStream ->
+                generateFileStream(fileResource, outputStream)
+            }
+
+        val responseBuilder =
+            if (fileResource.isPartialContent()) {
+                ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                    .header(
+                        HttpHeaders.CONTENT_RANGE,
+                        "bytes ${fileResource.rangeStart}-${fileResource.rangeEnd}/${fileResource.size}",
+                    )
+            } else {
+                ResponseEntity.ok()
+            }
 
         return responseBuilder
             .header(HttpHeaders.CONTENT_TYPE, fileResource.mimeType)
@@ -116,7 +131,10 @@ class ArchiveFileWebController(
             .body(streamingResponseBody)
     }
 
-    private fun generateFileStream(fileResource: com.whale.api.archive.domain.ArchiveFileResource, outputStream: OutputStream) {
+    private fun generateFileStream(
+        fileResource: com.whale.api.archive.domain.ArchiveFileResource,
+        outputStream: OutputStream,
+    ) {
         fileResource.inputStream.use { inputStream ->
             if (fileResource.isRangeRequest) {
                 val buffer = ByteArray(8192)

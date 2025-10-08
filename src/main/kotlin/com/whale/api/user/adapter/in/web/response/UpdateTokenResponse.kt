@@ -6,7 +6,7 @@ data class UpdateTokenResponse(
     companion object {
         fun success(): UpdateTokenResponse {
             return UpdateTokenResponse(
-                message = "Token updated successfully"
+                message = "Token updated successfully",
             )
         }
     }

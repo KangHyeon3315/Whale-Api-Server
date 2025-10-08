@@ -103,8 +103,9 @@ class UserService(
         logger.info("Update token request. userIdentifier: $userIdentifier")
 
         writeTransactionTemplate.execute {
-            val user = findUserOutput.findByIdentifier(userIdentifier)
-                ?: throw InvalidAccountException()
+            val user =
+                findUserOutput.findByIdentifier(userIdentifier)
+                    ?: throw InvalidAccountException()
 
             user.updateToken(token)
             saveUserOutput.save(user)

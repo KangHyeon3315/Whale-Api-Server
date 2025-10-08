@@ -1,8 +1,10 @@
 package com.whale.api.archive.adapter.output.persistence
 
+import com.querydsl.jpa.impl.JPAQueryFactory
 import com.whale.api.archive.adapter.output.persistence.entity.ArchiveEntity.Companion.toEntity
 import com.whale.api.archive.adapter.output.persistence.entity.ArchiveItemEntity.Companion.toEntity
 import com.whale.api.archive.adapter.output.persistence.entity.ArchiveMetadataEntity.Companion.toEntity
+import com.whale.api.archive.adapter.output.persistence.entity.QArchiveItemEntity
 import com.whale.api.archive.adapter.output.persistence.repository.ArchiveItemRepository
 import com.whale.api.archive.adapter.output.persistence.repository.ArchiveMetadataRepository
 import com.whale.api.archive.adapter.output.persistence.repository.ArchiveRepository
@@ -15,9 +17,6 @@ import com.whale.api.archive.application.port.out.SaveArchiveOutput
 import com.whale.api.archive.domain.Archive
 import com.whale.api.archive.domain.ArchiveItem
 import com.whale.api.archive.domain.ArchiveMetadata
-import com.querydsl.jpa.impl.JPAQueryFactory
-import com.whale.api.archive.adapter.output.persistence.entity.QArchiveItemEntity
-import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Repository
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -34,7 +33,6 @@ class ArchivePersistenceAdapter(
     FindArchiveItemOutput,
     SaveArchiveMetadataOutput,
     FindArchiveMetadataOutput {
-
     override fun save(archive: Archive): Archive {
         return archiveRepository.save(archive.toEntity()).toDomain()
     }
@@ -59,13 +57,18 @@ class ArchivePersistenceAdapter(
         return archiveItemRepository.findByArchiveIdentifier(archiveIdentifier).map { it.toDomain() }
     }
 
-    override fun findByArchiveIdentifierWithFilters(archiveIdentifier: UUID, fileName: String?, tags: List<String>?): List<ArchiveItem> {
+    override fun findByArchiveIdentifierWithFilters(
+        archiveIdentifier: UUID,
+        fileName: String?,
+        tags: List<String>?,
+    ): List<ArchiveItem> {
         val qArchiveItem = QArchiveItemEntity.archiveItemEntity
 
-        var query = jpaQueryFactory
-            .select(qArchiveItem)
-            .from(qArchiveItem)
-            .where(qArchiveItem.archiveIdentifier.eq(archiveIdentifier))
+        var query =
+            jpaQueryFactory
+                .select(qArchiveItem)
+                .from(qArchiveItem)
+                .where(qArchiveItem.archiveIdentifier.eq(archiveIdentifier))
 
         // 파일명 필터
         if (!fileName.isNullOrBlank()) {
@@ -83,14 +86,15 @@ class ArchivePersistenceAdapter(
         fileName: String?,
         tags: List<String>?,
         cursor: OffsetDateTime?,
-        limit: Int
+        limit: Int,
     ): List<ArchiveItem> {
         val qArchiveItem = QArchiveItemEntity.archiveItemEntity
 
-        var query = jpaQueryFactory
-            .select(qArchiveItem)
-            .from(qArchiveItem)
-            .where(qArchiveItem.archiveIdentifier.eq(archiveIdentifier))
+        var query =
+            jpaQueryFactory
+                .select(qArchiveItem)
+                .from(qArchiveItem)
+                .where(qArchiveItem.archiveIdentifier.eq(archiveIdentifier))
 
         // 파일명 필터
         if (!fileName.isNullOrBlank()) {
@@ -113,13 +117,18 @@ class ArchivePersistenceAdapter(
         return archiveItemRepository.countByArchiveIdentifier(archiveIdentifier)
     }
 
-    override fun countByArchiveIdentifierWithFilters(archiveIdentifier: UUID, fileName: String?, tags: List<String>?): Int {
+    override fun countByArchiveIdentifierWithFilters(
+        archiveIdentifier: UUID,
+        fileName: String?,
+        tags: List<String>?,
+    ): Int {
         val qArchiveItem = QArchiveItemEntity.archiveItemEntity
 
-        var query = jpaQueryFactory
-            .select(qArchiveItem.count())
-            .from(qArchiveItem)
-            .where(qArchiveItem.archiveIdentifier.eq(archiveIdentifier))
+        var query =
+            jpaQueryFactory
+                .select(qArchiveItem.count())
+                .from(qArchiveItem)
+                .where(qArchiveItem.archiveIdentifier.eq(archiveIdentifier))
 
         // 파일명 필터
         if (!fileName.isNullOrBlank()) {

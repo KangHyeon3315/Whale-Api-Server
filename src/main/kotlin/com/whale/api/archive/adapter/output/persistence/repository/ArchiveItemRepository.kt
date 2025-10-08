@@ -6,5 +6,6 @@ import java.util.UUID
 
 interface ArchiveItemRepository : JpaRepository<ArchiveItemEntity, UUID> {
     fun findByArchiveIdentifier(archiveIdentifier: UUID): List<ArchiveItemEntity>
+
     fun countByArchiveIdentifier(archiveIdentifier: UUID): Int
 }

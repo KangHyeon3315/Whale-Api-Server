@@ -1,5 +1,7 @@
 package com.whale.api.archive.adapter.input.web
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.whale.api.archive.adapter.input.web.request.CreateArchiveRequest
 import com.whale.api.archive.adapter.input.web.response.ArchiveItemPageResponse
 import com.whale.api.archive.adapter.input.web.response.ArchiveItemResponse
@@ -8,26 +10,20 @@ import com.whale.api.archive.adapter.input.web.response.ArchiveResponse
 import com.whale.api.archive.application.port.`in`.CreateArchiveUseCase
 import com.whale.api.archive.application.port.`in`.GetArchiveItemContentUseCase
 import com.whale.api.archive.application.port.`in`.GetArchiveItemsUseCase
-
 import com.whale.api.archive.application.port.`in`.GetArchiveStatusUseCase
-
 import com.whale.api.archive.application.port.`in`.UploadArchiveItemUseCase
 import com.whale.api.archive.application.port.`in`.command.UploadArchiveItemCommand
 import com.whale.api.global.annotation.RequireAuth
 import mu.KotlinLogging
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import org.springframework.web.multipart.MultipartFile
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -51,8 +47,8 @@ class ArchiveWebController(
     ): ResponseEntity<ArchiveResponse> {
         logger.info {
             "Creating archive: name='${request.name}', " +
-            "description='${request.description}', " +
-            "totalItems=${request.totalItems}"
+                "description='${request.description}', " +
+                "totalItems=${request.totalItems}"
         }
         val archive = createArchiveUseCase.createArchive(request.toCommand())
         return ResponseEntity.ok(ArchiveResponse.from(archive))
@@ -92,34 +88,39 @@ class ArchiveWebController(
     ): ResponseEntity<ArchiveItemResponse> {
         logger.info {
             "Uploading item to archive: $archiveId, " +
-            "file: ${file.originalFilename} (${file.size} bytes), " +
-            "originalPath: $originalPath, " +
-            "isLivePhoto: $isLivePhoto, " +
-            "hasLivePhotoVideo: ${livePhotoVideo != null}, " +
-            "metadata: $metadataJson"
+                "file: ${file.originalFilename} (${file.size} bytes), " +
+                "originalPath: $originalPath, " +
+                "isLivePhoto: $isLivePhoto, " +
+                "hasLivePhotoVideo: ${livePhotoVideo != null}, " +
+                "metadata: $metadataJson"
         }
 
         // JSON 문자열을 Map/List로 파싱
-        val metadata = try {
-            if (metadataJson.isNullOrBlank()) emptyMap()
-            else objectMapper.readValue<Map<String, String>>(metadataJson)
-        } catch (e: Exception) {
-            logger.warn { "Failed to parse metadata JSON: $metadataJson" }
-            emptyMap<String, String>()
-        }
+        val metadata =
+            try {
+                if (metadataJson.isNullOrBlank()) {
+                    emptyMap()
+                } else {
+                    objectMapper.readValue<Map<String, String>>(metadataJson)
+                }
+            } catch (e: Exception) {
+                logger.warn { "Failed to parse metadata JSON: $metadataJson" }
+                emptyMap<String, String>()
+            }
 
         logger.info { "Parsed metadata: $metadata" }
 
-        val command = UploadArchiveItemCommand(
-            archiveIdentifier = archiveId,
-            file = file,
-            originalPath = originalPath,
-            isLivePhoto = isLivePhoto,
-            livePhotoVideo = livePhotoVideo,
-            originalCreatedDate = originalCreatedDate,
-            originalModifiedDate = originalModifiedDate,
-            metadata = metadata,
-        )
+        val command =
+            UploadArchiveItemCommand(
+                archiveIdentifier = archiveId,
+                file = file,
+                originalPath = originalPath,
+                isLivePhoto = isLivePhoto,
+                livePhotoVideo = livePhotoVideo,
+                originalCreatedDate = originalCreatedDate,
+                originalModifiedDate = originalModifiedDate,
+                metadata = metadata,
+            )
 
         val archiveItem = uploadArchiveItemUseCase.uploadItem(command)
         return ResponseEntity.ok(ArchiveItemResponse.from(archiveItem))
@@ -138,7 +139,10 @@ class ArchiveWebController(
         val cursorDate = cursor?.let { OffsetDateTime.parse(it) }
         val page = getArchiveItemsUseCase.getArchiveItems(archiveId, fileName, null, cursorDate, limit)
 
-        logger.info { "Retrieved ${page.items.size} items for archive: $archiveId (hasNext=${page.hasNext}, totalCount=${page.totalCount})" }
+        logger.info {
+            "Retrieved ${page.items.size} items for archive: $archiveId " +
+                "(hasNext=${page.hasNext}, totalCount=${page.totalCount})"
+        }
         return ResponseEntity.ok(ArchiveItemPageResponse.from(page.items, page.hasNext, page.totalCount))
     }
 
@@ -179,8 +183,9 @@ class ArchiveWebController(
         @PathVariable archiveId: UUID,
     ): ResponseEntity<Map<String, Int>> {
         val items = getArchiveItemsUseCase.getArchiveItems(archiveId)
-        val categories = items.groupBy { it.getFileCategory() }
-            .mapValues { it.value.size }
+        val categories =
+            items.groupBy { it.getFileCategory() }
+                .mapValues { it.value.size }
         return ResponseEntity.ok(categories)
     }
 
@@ -206,6 +211,4 @@ class ArchiveWebController(
         logger.info { "Serving text content preview: itemId=$itemId, contentLength=${content.length}, maxLength=$maxLength" }
         return ResponseEntity.ok(mapOf("content" to content, "isPreview" to "true"))
     }
-
-
 }
