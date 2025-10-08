@@ -8,3 +8,9 @@ spring:
 #---- Logging Setting ----
 logging:
   config: classpath:logback/logback-prod.xml
+
+file:
+  base-path: /data/file
+
+archive:
+  base-path: /data/archive
