@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true">
+    <include resource="org/springframework/boot/logging/logback/base.xml" />
+
+    <appender name="VECTOR" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>whale-server-whale-vector.whale.svc.cluster.local:1514</destination>
+        <port>1514</port>
+        <reconnectionDelay>10000</reconnectionDelay>
+        <queueSize>512</queueSize>
+        <includeCallerData>true</includeCallerData>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <charset>UTF-8</charset>
+            <customFields>{"env":"prod","service":"whale-scheduler"}</customFields>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="VECTOR"/>
+    </root>
+
+    <logger name="com.whale" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="VECTOR"/>
+    </logger>
+
+    <logger name="org.springframework.web" additivity="false">
+        <level value="INFO"/>
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="VECTOR"/>
+    </logger>
+</configuration>
