@@ -13,6 +13,7 @@ import com.whale.api.file.application.port.`in`.GetUnsortedTreeUseCase
 import com.whale.api.file.application.port.`in`.SaveFileUseCase
 import com.whale.api.file.application.port.`in`.SortType
 import com.whale.api.file.domain.FileResource
+import com.whale.api.file.domain.property.FileProperty
 import com.whale.api.global.annotation.RequireAuth
 import com.whale.api.global.utils.Encoder.decodeBase64
 import jakarta.servlet.http.HttpServletRequest
@@ -40,6 +41,7 @@ class FileWebController(
     private val getFileTypesUseCase: GetFileTypesUseCase,
     private val getAllTagsUseCase: GetAllTagsUseCase,
     private val getUnsortedTreeUseCase: GetUnsortedTreeUseCase,
+    private val fileProperty: FileProperty,
 ) {
     private val logger = KotlinLogging.logger {}
 
@@ -77,6 +79,11 @@ class FileWebController(
         @RequestParam path: String,
         request: HttpServletRequest,
     ): ResponseEntity<StreamingResponseBody> {
+        // HEAD 요청인 경우 파일 메타데이터만 확인하고 빠르게 응답
+        if (request.method == "HEAD") {
+            return handleVideoHead(path)
+        }
+
         val rangeHeader = request.getHeader("Range")
         val fileResource = getFileUseCase.getVideo(path, rangeHeader)
 
@@ -103,6 +110,33 @@ class FileWebController(
                 .header(HttpHeaders.ACCEPT_RANGES, "bytes")
                 .body(streamingResponseBody)
         }
+    }
+
+    private fun handleVideoHead(path: String): ResponseEntity<StreamingResponseBody> {
+        // HEAD 요청을 위한 빠른 파일 정보 확인
+        val normalizedPath = java.nio.file.Paths.get(
+            fileProperty.basePath,
+            fileProperty.unsortedPath,
+            path.replace(" ", "+")
+        ).toString()
+
+        val file = java.io.File(normalizedPath)
+        if (!file.exists()) {
+            throw RuntimeException("File not found: $path")
+        }
+
+        val extension = file.extension.lowercase()
+        val mimeType = fileProperty.mimeTypeMapping[".$extension"] ?: "application/octet-stream"
+
+        // 빈 StreamingResponseBody (HEAD 요청은 본문이 없음)
+        val emptyStreamingResponseBody = StreamingResponseBody { }
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_TYPE, mimeType)
+            .header(HttpHeaders.CONTENT_LENGTH, file.length().toString())
+            .header("Total-Content-Length", file.length().toString())
+            .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+            .body(emptyStreamingResponseBody)
     }
 
     private fun generateVideoStream(
