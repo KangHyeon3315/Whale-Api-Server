@@ -20,13 +20,15 @@ class GlobalExceptionHandler {
     ): ResponseEntity<ErrorResponse> {
         logger.warn { "Access denied: ${ex.message} for request: ${request.getDescription(false)}" }
 
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-            ErrorResponse(
-                status = HttpStatus.FORBIDDEN.value(),
-                path = request.getDescription(false).removePrefix("uri="),
-                message = "접근 권한이 없습니다.",
-            ),
-        )
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .header("Content-Type", "application/json")
+            .body(
+                ErrorResponse(
+                    status = HttpStatus.FORBIDDEN.value(),
+                    path = request.getDescription(false).removePrefix("uri="),
+                    message = "접근 권한이 없습니다.",
+                ),
+            )
     }
 
     @ExceptionHandler(Exception::class)
@@ -63,6 +65,7 @@ class GlobalExceptionHandler {
 
         return ResponseEntity
             .status(statusCode)
+            .header("Content-Type", "application/json")
             .body(
                 ErrorResponse(
                     status = statusCode,

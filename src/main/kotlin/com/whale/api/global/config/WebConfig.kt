@@ -22,6 +22,7 @@ class WebConfig : WebMvcConfigurer {
                 HttpMethod.PUT.name(),
                 HttpMethod.PATCH.name(),
                 HttpMethod.DELETE.name(),
+                HttpMethod.HEAD.name(),
             )
     }
 }

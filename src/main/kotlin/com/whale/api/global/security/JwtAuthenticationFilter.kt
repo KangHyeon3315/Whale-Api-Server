@@ -25,6 +25,8 @@ class JwtAuthenticationFilter(
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
+        logger.info("JWT Filter - Request: ${request.method} ${request.requestURI} from ${request.remoteAddr}")
+
         try {
             val token = extractTokenFromRequest(request)
 
