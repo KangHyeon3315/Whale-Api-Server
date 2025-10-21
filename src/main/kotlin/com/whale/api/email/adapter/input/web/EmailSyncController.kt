@@ -20,20 +20,20 @@ class EmailSyncController(
     private val syncEmailUseCase: SyncEmailUseCase,
 ) {
     private val logger = KotlinLogging.logger {}
-    
+
     @RequireAuth
     @PostMapping("/all")
     fun syncAllAccounts(
         @Valid @RequestBody request: SyncEmailRequest,
     ): ResponseEntity<Map<String, String>> {
         logger.info { "Starting sync for all accounts of user: ${request.userId}" }
-        
-        syncEmailUseCase.syncAllAccounts(request.userId)
-        
+
+        syncEmailUseCase.syncAllAccounts(request.userId.toString())
+
         logger.info { "Completed sync for all accounts of user: ${request.userId}" }
         return ResponseEntity.ok(mapOf("message" to "모든 계정 동기화가 완료되었습니다"))
     }
-    
+
     @RequireAuth
     @PostMapping("/account/{accountId}")
     fun syncAccount(
@@ -41,13 +41,13 @@ class EmailSyncController(
         @RequestParam userId: UUID,
     ): ResponseEntity<Map<String, String>> {
         logger.info { "Starting sync for account: $accountId, user: $userId" }
-        
-        syncEmailUseCase.syncAccount(userId, accountId)
-        
+
+        syncEmailUseCase.syncAccount(userId.toString(), accountId)
+
         logger.info { "Completed sync for account: $accountId" }
         return ResponseEntity.ok(mapOf("message" to "계정 동기화가 완료되었습니다"))
     }
-    
+
     @RequireAuth
     @PostMapping("/account/{accountId}/folder/{folderName}")
     fun syncAccountFolder(
@@ -56,9 +56,9 @@ class EmailSyncController(
         @RequestParam userId: UUID,
     ): ResponseEntity<Map<String, String>> {
         logger.info { "Starting sync for account: $accountId, folder: $folderName, user: $userId" }
-        
-        syncEmailUseCase.syncAccountFolder(userId, accountId, folderName)
-        
+
+        syncEmailUseCase.syncAccountFolder(userId.toString(), accountId, folderName)
+
         logger.info { "Completed sync for account: $accountId, folder: $folderName" }
         return ResponseEntity.ok(mapOf("message" to "폴더 동기화가 완료되었습니다"))
     }

@@ -7,7 +7,7 @@ import java.util.UUID
 
 data class EmailAccountResponse(
     val identifier: UUID,
-    val userId: UUID,
+    val userId: String,
     val emailAddress: String,
     val provider: EmailProvider,
     val displayName: String?,
@@ -32,7 +32,7 @@ data class EmailAccountResponse(
                 modifiedDate = emailAccount.modifiedDate,
             )
         }
-        
+
         fun fromList(emailAccounts: List<EmailAccount>): List<EmailAccountResponse> {
             return emailAccounts.map { from(it) }
         }

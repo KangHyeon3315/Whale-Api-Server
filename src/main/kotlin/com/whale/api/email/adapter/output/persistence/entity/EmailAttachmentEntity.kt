@@ -14,48 +14,61 @@ data class EmailAttachmentEntity(
     @Id
     @Column(name = "identifier", nullable = false)
     val identifier: UUID,
-    
+
     @Column(name = "email_identifier", nullable = false)
     val emailIdentifier: UUID,
-    
+
+    // Provider-specific attachment ID
+    @Column(name = "attachment_id", nullable = false)
+    val attachmentId: String,
+
     // Attachment info
     @Column(name = "filename", nullable = false)
     val filename: String,
-    
-    @Column(name = "content_type", nullable = true)
-    val contentType: String?,
-    
+
+    @Column(name = "mime_type", nullable = true)
+    val mimeType: String?,
+
     @Column(name = "size_bytes", nullable = true)
     val sizeBytes: Long?,
-    
+
     @Column(name = "content_id", nullable = true)
     val contentId: String?,
-    
+
     // Storage info
-    @Column(name = "stored_path", nullable = true, columnDefinition = "TEXT")
-    val storedPath: String?,
-    
+    @Column(name = "local_file_path", nullable = true, columnDefinition = "TEXT")
+    val localFilePath: String?,
+
     @Column(name = "checksum", nullable = true)
     val checksum: String?,
-    
+
     @Column(name = "is_inline", nullable = false)
     val isInline: Boolean = false,
-    
+
+    @Column(name = "has_local_file", nullable = false)
+    val hasLocalFile: Boolean = false,
+
     @Column(name = "created_date", nullable = false)
     val createdDate: OffsetDateTime,
+
+    @Column(name = "modified_date", nullable = false)
+    val modifiedDate: OffsetDateTime,
 ) {
     fun toDomain(): EmailAttachment {
         return EmailAttachment(
             identifier = this.identifier,
             emailIdentifier = this.emailIdentifier,
+            attachmentId = this.attachmentId,
             filename = this.filename,
-            contentType = this.contentType,
+            mimeType = this.mimeType,
             sizeBytes = this.sizeBytes,
             contentId = this.contentId,
-            storedPath = this.storedPath,
+            localFilePath = this.localFilePath,
             checksum = this.checksum,
             isInline = this.isInline,
+            hasLocalFile = this.hasLocalFile,
             createdDate = this.createdDate,
+            modifiedDate = this.modifiedDate,
         )
     }
 
@@ -64,14 +77,17 @@ data class EmailAttachmentEntity(
             return EmailAttachmentEntity(
                 identifier = this.identifier,
                 emailIdentifier = this.emailIdentifier,
+                attachmentId = this.attachmentId,
                 filename = this.filename,
-                contentType = this.contentType,
+                mimeType = this.mimeType,
                 sizeBytes = this.sizeBytes,
                 contentId = this.contentId,
-                storedPath = this.storedPath,
+                localFilePath = this.localFilePath,
                 checksum = this.checksum,
                 isInline = this.isInline,
+                hasLocalFile = this.hasLocalFile,
                 createdDate = this.createdDate,
+                modifiedDate = this.modifiedDate,
             )
         }
     }
