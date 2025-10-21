@@ -81,3 +81,17 @@ file:
 
 archive:
   base-path: ${ARCHIVE_BASE_PATH}
+
+# Email Setting
+email:
+  gmail:
+    client-id: ${GMAIL_CLIENT_ID}
+    client-secret: ${GMAIL_CLIENT_SECRET}
+    redirect-uri: ${GMAIL_REDIRECT_URI:http://localhost:8080/api/email/oauth/callback}
+  naver:
+    imap-host: imap.naver.com
+    imap-port: 993
+    smtp-host: smtp.naver.com
+    smtp-port: 587
+  encryption:
+    secret-key: ${EMAIL_ENCRYPTION_SECRET}

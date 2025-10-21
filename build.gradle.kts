@@ -70,6 +70,15 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
+    // Email
+    implementation("com.google.apis:google-api-services-gmail:v1-rev20240520-2.0.0")
+    implementation("com.google.auth:google-auth-library-oauth2-http:1.23.0")
+    implementation("jakarta.mail:jakarta.mail-api:2.1.3")
+    implementation("org.eclipse.angus:jakarta.mail:2.0.3")
+
+    // Encryption for email credentials
+    implementation("org.springframework.security:spring-security-crypto")
+
     // Metrics
     implementation("io.micrometer:micrometer-registry-prometheus")
 
