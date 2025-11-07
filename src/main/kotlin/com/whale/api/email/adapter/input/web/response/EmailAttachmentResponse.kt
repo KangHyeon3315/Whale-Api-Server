@@ -33,7 +33,7 @@ data class EmailAttachmentResponse(
                 modifiedDate = attachment.modifiedDate,
             )
         }
-        
+
         fun fromList(attachments: List<EmailAttachment>): List<EmailAttachmentResponse> {
             return attachments.map { from(it) }
         }

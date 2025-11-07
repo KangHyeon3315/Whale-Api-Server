@@ -6,7 +6,6 @@ import com.whale.api.global.annotation.Scheduler
 import mu.KotlinLogging
 import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.Scheduled
-import java.util.UUID
 
 @Scheduler
 class EmailSyncScheduler(
@@ -104,12 +103,13 @@ class EmailSyncScheduler(
                 accounts.forEach { account ->
                     try {
                         // 각 폴더별로 개별 동기화 수행
-                        val folders = when (account.provider) {
-                            com.whale.api.email.domain.EmailProvider.GMAIL ->
-                                listOf("INBOX", "SENT", "DRAFT", "SPAM", "TRASH")
-                            com.whale.api.email.domain.EmailProvider.NAVER ->
-                                listOf("INBOX", "SENT", "DRAFT", "SPAM", "TRASH")
-                        }
+                        val folders =
+                            when (account.provider) {
+                                com.whale.api.email.domain.EmailProvider.GMAIL ->
+                                    listOf("INBOX", "SENT", "DRAFT", "SPAM", "TRASH")
+                                com.whale.api.email.domain.EmailProvider.NAVER ->
+                                    listOf("INBOX", "SENT", "DRAFT", "SPAM", "TRASH")
+                            }
 
                         folders.forEach { folderName ->
                             try {
@@ -117,7 +117,7 @@ class EmailSyncScheduler(
                                 syncEmailUseCase.syncAccountFolder(
                                     userId.toString(),
                                     account.identifier,
-                                    folderName
+                                    folderName,
                                 )
                             } catch (e: Exception) {
                                 logger.error(e) {

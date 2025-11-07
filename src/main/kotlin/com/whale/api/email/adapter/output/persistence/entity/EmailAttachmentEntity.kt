@@ -14,43 +14,31 @@ data class EmailAttachmentEntity(
     @Id
     @Column(name = "identifier", nullable = false)
     val identifier: UUID,
-
     @Column(name = "email_identifier", nullable = false)
     val emailIdentifier: UUID,
-
     // Provider-specific attachment ID
     @Column(name = "attachment_id", nullable = false)
     val attachmentId: String,
-
     // Attachment info
     @Column(name = "filename", nullable = false)
     val filename: String,
-
     @Column(name = "mime_type", nullable = true)
     val mimeType: String?,
-
     @Column(name = "size_bytes", nullable = true)
     val sizeBytes: Long?,
-
     @Column(name = "content_id", nullable = true)
     val contentId: String?,
-
     // Storage info
     @Column(name = "local_file_path", nullable = true, columnDefinition = "TEXT")
     val localFilePath: String?,
-
     @Column(name = "checksum", nullable = true)
     val checksum: String?,
-
     @Column(name = "is_inline", nullable = false)
     val isInline: Boolean = false,
-
     @Column(name = "has_local_file", nullable = false)
     val hasLocalFile: Boolean = false,
-
     @Column(name = "created_date", nullable = false)
     val createdDate: OffsetDateTime,
-
     @Column(name = "modified_date", nullable = false)
     val modifiedDate: OffsetDateTime,
 ) {

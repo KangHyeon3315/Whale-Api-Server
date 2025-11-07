@@ -3,8 +3,8 @@ package com.whale.api.email.adapter.input.web
 import com.whale.api.email.adapter.input.web.request.RegisterEmailAccountRequest
 import com.whale.api.email.adapter.input.web.response.EmailAccountResponse
 import com.whale.api.email.adapter.input.web.response.GmailAuthUrlResponse
-import com.whale.api.email.application.port.`in`.RegisterEmailAccountUseCase
 import com.whale.api.email.application.port.`in`.GetEmailUseCase
+import com.whale.api.email.application.port.`in`.RegisterEmailAccountUseCase
 import com.whale.api.global.annotation.RequireAuth
 import jakarta.validation.Valid
 import mu.KotlinLogging
@@ -35,14 +35,15 @@ class EmailAccountController(
 
         request.validate()
 
-        val emailAccount = when (request.provider) {
-            com.whale.api.email.domain.EmailProvider.GMAIL -> {
-                registerEmailAccountUseCase.registerGmailAccount(request.toCommand())
+        val emailAccount =
+            when (request.provider) {
+                com.whale.api.email.domain.EmailProvider.GMAIL -> {
+                    registerEmailAccountUseCase.registerGmailAccount(request.toCommand())
+                }
+                com.whale.api.email.domain.EmailProvider.NAVER -> {
+                    registerEmailAccountUseCase.registerNaverAccount(request.toCommand())
+                }
             }
-            com.whale.api.email.domain.EmailProvider.NAVER -> {
-                registerEmailAccountUseCase.registerNaverAccount(request.toCommand())
-            }
-        }
 
         logger.info { "Successfully registered email account: ${emailAccount.identifier}" }
         return ResponseEntity.ok(EmailAccountResponse.from(emailAccount))
@@ -69,8 +70,9 @@ class EmailAccountController(
     ): ResponseEntity<EmailAccountResponse> {
         logger.info { "Getting email account: $accountId for user: $userId" }
 
-        val emailAccount = getEmailUseCase.getEmailAccount(userId.toString(), accountId)
-            ?: return ResponseEntity.notFound().build()
+        val emailAccount =
+            getEmailUseCase.getEmailAccount(userId.toString(), accountId)
+                ?: return ResponseEntity.notFound().build()
 
         return ResponseEntity.ok(EmailAccountResponse.from(emailAccount))
     }

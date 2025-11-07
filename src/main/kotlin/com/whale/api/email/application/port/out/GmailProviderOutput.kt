@@ -5,31 +5,31 @@ import com.whale.api.email.domain.EmailAccount
 
 interface GmailProviderOutput {
     fun getAuthorizationUrl(userId: String): String
-    
+
     fun exchangeCodeForTokens(
         authorizationCode: String,
         emailAddress: String,
     ): TokenInfo
-    
+
     fun refreshAccessToken(refreshToken: String): TokenInfo
-    
+
     fun getEmails(
         emailAccount: EmailAccount,
         folderName: String? = null,
         maxResults: Int = 50,
         pageToken: String? = null,
     ): EmailSyncResult
-    
+
     fun getEmail(
         emailAccount: EmailAccount,
         messageId: String,
     ): Email?
-    
+
     fun markAsRead(
         emailAccount: EmailAccount,
         messageId: String,
     )
-    
+
     fun markAsUnread(
         emailAccount: EmailAccount,
         messageId: String,

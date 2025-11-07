@@ -57,7 +57,7 @@ data class EmailResponse(
                 modifiedDate = email.modifiedDate,
             )
         }
-        
+
         fun fromList(emails: List<Email>): List<EmailResponse> {
             return emails.map { from(it) }
         }

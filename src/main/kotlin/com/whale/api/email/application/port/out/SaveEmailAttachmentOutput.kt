@@ -4,5 +4,6 @@ import com.whale.api.email.domain.EmailAttachment
 
 interface SaveEmailAttachmentOutput {
     fun save(emailAttachment: EmailAttachment): EmailAttachment
+
     fun saveAll(emailAttachments: List<EmailAttachment>): List<EmailAttachment>
 }

@@ -12,37 +12,38 @@ interface EmailRepository : JpaRepository<EmailEntity, UUID> {
         emailAccountIdentifier: UUID,
         messageId: String,
     ): EmailEntity?
-    
+
     fun findByEmailAccountIdentifier(
         emailAccountIdentifier: UUID,
         pageable: Pageable,
     ): List<EmailEntity>
-    
+
     fun findByEmailAccountIdentifierAndFolderName(
         emailAccountIdentifier: UUID,
         folderName: String,
         pageable: Pageable,
     ): List<EmailEntity>
-    
+
     fun findByEmailAccountIdentifierAndIsRead(
         emailAccountIdentifier: UUID,
         isRead: Boolean,
         pageable: Pageable,
     ): List<EmailEntity>
-    
+
     fun findByEmailAccountIdentifierAndFolderNameAndIsRead(
         emailAccountIdentifier: UUID,
         folderName: String,
         isRead: Boolean,
         pageable: Pageable,
     ): List<EmailEntity>
-    
+
     fun existsByEmailAccountIdentifierAndMessageId(
         emailAccountIdentifier: UUID,
         messageId: String,
     ): Boolean
-    
-    @Query("""
+
+    @Query(
+        """
         SELECT e FROM EmailEntity e 
         WHERE (:accountIdentifier IS NULL OR e.emailAccountIdentifier = :accountIdentifier)
         AND (
@@ -52,15 +53,16 @@ interface EmailRepository : JpaRepository<EmailEntity, UUID> {
             LOWER(e.bodyText) LIKE LOWER(CONCAT('%', :query, '%'))
         )
         ORDER BY e.dateReceived DESC
-    """)
+    """,
+    )
     fun searchEmails(
         @Param("accountIdentifier") accountIdentifier: UUID?,
         @Param("query") query: String,
         pageable: Pageable,
     ): List<EmailEntity>
-    
+
     fun countByEmailAccountIdentifier(emailAccountIdentifier: UUID): Long
-    
+
     fun countByEmailAccountIdentifierAndIsRead(
         emailAccountIdentifier: UUID,
         isRead: Boolean,

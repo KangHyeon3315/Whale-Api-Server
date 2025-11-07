@@ -32,17 +32,18 @@ class EmailController(
     ): ResponseEntity<EmailListResponse> {
         logger.info {
             "Getting emails for account: $accountId, user: $userId, folder: $folderName, " +
-            "isRead: $isRead, limit: $limit, offset: $offset"
+                "isRead: $isRead, limit: $limit, offset: $offset"
         }
 
-        val emails = getEmailUseCase.getEmails(
-            userId = userId.toString(),
-            accountId = accountId,
-            folderName = folderName,
-            isRead = isRead,
-            limit = limit,
-            offset = offset
-        )
+        val emails =
+            getEmailUseCase.getEmails(
+                userId = userId.toString(),
+                accountId = accountId,
+                folderName = folderName,
+                isRead = isRead,
+                limit = limit,
+                offset = offset,
+            )
 
         // 다음 페이지 존재 여부 확인을 위해 limit + 1로 조회했다고 가정
         val hasNext = emails.size > limit
@@ -53,8 +54,8 @@ class EmailController(
             EmailListResponse.from(
                 emails = actualEmails,
                 totalCount = actualEmails.size,
-                hasNext = hasNext
-            )
+                hasNext = hasNext,
+            ),
         )
     }
 
@@ -66,8 +67,9 @@ class EmailController(
     ): ResponseEntity<EmailResponse> {
         logger.info { "Getting email: $emailId for user: $userId" }
 
-        val email = getEmailUseCase.getEmail(userId.toString(), emailId)
-            ?: return ResponseEntity.notFound().build()
+        val email =
+            getEmailUseCase.getEmail(userId.toString(), emailId)
+                ?: return ResponseEntity.notFound().build()
 
         return ResponseEntity.ok(EmailResponse.from(email))
     }
@@ -83,16 +85,17 @@ class EmailController(
     ): ResponseEntity<EmailListResponse> {
         logger.info {
             "Searching emails for user: $userId, query: '$query', account: $accountId, " +
-            "limit: $limit, offset: $offset"
+                "limit: $limit, offset: $offset"
         }
 
-        val emails = getEmailUseCase.searchEmails(
-            userId = userId.toString(),
-            accountId = accountId,
-            query = query,
-            limit = limit,
-            offset = offset
-        )
+        val emails =
+            getEmailUseCase.searchEmails(
+                userId = userId.toString(),
+                accountId = accountId,
+                query = query,
+                limit = limit,
+                offset = offset,
+            )
 
         // 다음 페이지 존재 여부 확인
         val hasNext = emails.size > limit
@@ -103,8 +106,8 @@ class EmailController(
             EmailListResponse.from(
                 emails = actualEmails,
                 totalCount = actualEmails.size,
-                hasNext = hasNext
-            )
+                hasNext = hasNext,
+            ),
         )
     }
 }

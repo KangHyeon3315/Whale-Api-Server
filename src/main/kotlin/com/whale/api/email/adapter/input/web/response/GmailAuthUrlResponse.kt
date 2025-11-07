@@ -5,7 +5,10 @@ data class GmailAuthUrlResponse(
     val state: String,
 ) {
     companion object {
-        fun from(authUrl: String, userId: String): GmailAuthUrlResponse {
+        fun from(
+            authUrl: String,
+            userId: String,
+        ): GmailAuthUrlResponse {
             return GmailAuthUrlResponse(
                 authUrl = authUrl,
                 state = userId,

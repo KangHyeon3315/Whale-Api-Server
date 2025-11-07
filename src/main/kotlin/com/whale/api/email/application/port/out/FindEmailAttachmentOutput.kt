@@ -6,10 +6,13 @@ import java.util.UUID
 
 interface FindEmailAttachmentOutput {
     fun findByIdentifier(identifier: UUID): EmailAttachment?
+
     fun findAllByEmailIdentifier(emailIdentifier: UUID): List<EmailAttachment>
+
     fun findByEmailIdentifierAndAttachmentId(
         emailIdentifier: UUID,
         attachmentId: String,
     ): EmailAttachment?
+
     fun findOldAttachments(cutoffDate: OffsetDateTime): List<EmailAttachment>
 }

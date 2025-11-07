@@ -4,7 +4,6 @@ import com.whale.api.email.application.port.out.EncryptionOutput
 import com.whale.api.email.domain.property.EmailProperty
 import org.springframework.security.crypto.encrypt.Encryptors
 import org.springframework.security.crypto.encrypt.TextEncryptor
-import org.springframework.security.crypto.keygen.KeyGenerators
 import org.springframework.stereotype.Component
 import java.util.Base64
 
@@ -12,13 +11,12 @@ import java.util.Base64
 class EncryptionAdapter(
     private val emailProperty: EmailProperty,
 ) : EncryptionOutput {
-    
     private val textEncryptor: TextEncryptor by lazy {
         val password = emailProperty.encryptionSecretKey
         val salt = generateSalt()
         Encryptors.text(password, salt)
     }
-    
+
     override fun encrypt(plainText: String): String {
         return try {
             textEncryptor.encrypt(plainText)
@@ -26,7 +24,7 @@ class EncryptionAdapter(
             throw EncryptionException("Failed to encrypt text", e)
         }
     }
-    
+
     override fun decrypt(encryptedText: String): String {
         return try {
             textEncryptor.decrypt(encryptedText)
@@ -34,7 +32,7 @@ class EncryptionAdapter(
             throw EncryptionException("Failed to decrypt text", e)
         }
     }
-    
+
     private fun generateSalt(): String {
         // 고정된 salt를 사용하여 동일한 암호화 결과를 보장
         // 실제 운영환경에서는 더 안전한 방법을 고려해야 함

@@ -5,7 +5,7 @@ import java.util.UUID
 
 interface FindEmailOutput {
     fun findByIdentifier(identifier: UUID): Email?
-    
+
     fun findByAccountIdentifier(
         accountIdentifier: UUID,
         folderName: String? = null,
@@ -13,19 +13,19 @@ interface FindEmailOutput {
         limit: Int = 50,
         offset: Int = 0,
     ): List<Email>
-    
+
     fun findByMessageId(
         accountIdentifier: UUID,
         messageId: String,
     ): Email?
-    
+
     fun searchEmails(
         accountIdentifier: UUID? = null,
         query: String,
         limit: Int = 50,
         offset: Int = 0,
     ): List<Email>
-    
+
     fun existsByAccountIdentifierAndMessageId(
         accountIdentifier: UUID,
         messageId: String,

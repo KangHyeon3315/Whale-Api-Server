@@ -114,11 +114,12 @@ class FileWebController(
 
     private fun handleVideoHead(path: String): ResponseEntity<StreamingResponseBody> {
         // HEAD 요청을 위한 빠른 파일 정보 확인
-        val normalizedPath = java.nio.file.Paths.get(
-            fileProperty.basePath,
-            fileProperty.unsortedPath,
-            path.replace(" ", "+")
-        ).toString()
+        val normalizedPath =
+            java.nio.file.Paths.get(
+                fileProperty.basePath,
+                fileProperty.unsortedPath,
+                path.replace(" ", "+"),
+            ).toString()
 
         val file = java.io.File(normalizedPath)
         if (!file.exists()) {

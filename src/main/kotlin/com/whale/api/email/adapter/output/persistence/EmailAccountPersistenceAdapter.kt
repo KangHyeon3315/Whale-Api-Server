@@ -15,7 +15,6 @@ class EmailAccountPersistenceAdapter(
     private val emailAccountRepository: EmailAccountRepository,
 ) : SaveEmailAccountOutput,
     FindEmailAccountOutput {
-
     override fun save(emailAccount: EmailAccount): EmailAccount {
         return emailAccountRepository.save(emailAccount.toEntity()).toDomain()
     }

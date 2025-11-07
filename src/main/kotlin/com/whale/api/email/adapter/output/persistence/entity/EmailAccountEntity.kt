@@ -17,47 +17,34 @@ data class EmailAccountEntity(
     @Id
     @Column(name = "identifier", nullable = false)
     val identifier: UUID,
-    
     @Column(name = "user_id", nullable = false)
     val userId: String,
-    
     @Column(name = "email_address", nullable = false)
     val emailAddress: String,
-    
     @Enumerated(EnumType.STRING)
     @Column(name = "provider", nullable = false)
     val provider: EmailProvider,
-    
     @Column(name = "display_name", nullable = true)
     val displayName: String?,
-    
     // OAuth2 credentials (for Gmail)
     @Column(name = "access_token", nullable = true, columnDefinition = "TEXT")
     val accessToken: String?,
-    
     @Column(name = "refresh_token", nullable = true, columnDefinition = "TEXT")
     val refreshToken: String?,
-    
     @Column(name = "token_expiry", nullable = true)
     val tokenExpiry: OffsetDateTime?,
-    
     // IMAP/SMTP credentials (for Naver, encrypted)
     @Column(name = "encrypted_password", nullable = true, columnDefinition = "TEXT")
     val encryptedPassword: String?,
-    
     // Account settings
     @Column(name = "is_active", nullable = false)
     val isActive: Boolean = true,
-    
     @Column(name = "sync_enabled", nullable = false)
     val syncEnabled: Boolean = true,
-    
     @Column(name = "last_sync_date", nullable = true)
     val lastSyncDate: OffsetDateTime?,
-    
     @Column(name = "created_date", nullable = false)
     val createdDate: OffsetDateTime,
-    
     @Column(name = "modified_date", nullable = false)
     val modifiedDate: OffsetDateTime,
 ) {

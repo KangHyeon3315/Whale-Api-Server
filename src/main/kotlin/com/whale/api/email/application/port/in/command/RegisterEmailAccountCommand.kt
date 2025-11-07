@@ -7,10 +7,8 @@ data class RegisterEmailAccountCommand(
     val emailAddress: String,
     val provider: EmailProvider,
     val displayName: String?,
-    
     // For OAuth2 (Gmail)
     val authorizationCode: String? = null,
-    
     // For IMAP (Naver)
     val password: String? = null,
 )

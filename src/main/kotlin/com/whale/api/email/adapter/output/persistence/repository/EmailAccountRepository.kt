@@ -33,36 +33,47 @@ interface EmailAccountRepository : JpaRepository<EmailAccountEntity, UUID> {
 
     fun findAllByIsActive(isActive: Boolean): List<EmailAccountEntity>
 
-    fun findAllByProviderAndIsActive(provider: EmailProvider, isActive: Boolean): List<EmailAccountEntity>
+    fun findAllByProviderAndIsActive(
+        provider: EmailProvider,
+        isActive: Boolean,
+    ): List<EmailAccountEntity>
 
-    @Query("""
+    @Query(
+        """
         SELECT e FROM EmailAccountEntity e
         WHERE e.isActive = true
         AND e.syncEnabled = true
         AND (e.lastSyncDate IS NULL OR e.lastSyncDate < :threshold)
-    """)
-    fun findStaleAccounts(@Param("threshold") threshold: OffsetDateTime): List<EmailAccountEntity>
+    """,
+    )
+    fun findStaleAccounts(
+        @Param("threshold") threshold: OffsetDateTime,
+    ): List<EmailAccountEntity>
 
-    @Query("""
+    @Query(
+        """
         SELECT e FROM EmailAccountEntity e
         WHERE e.provider = :provider
         AND e.isActive = true
         AND e.tokenExpiry IS NOT NULL
         AND e.tokenExpiry < :threshold
-    """)
+    """,
+    )
     fun findAccountsWithExpiringTokens(
         @Param("provider") provider: EmailProvider,
-        @Param("threshold") threshold: OffsetDateTime
+        @Param("threshold") threshold: OffsetDateTime,
     ): List<EmailAccountEntity>
 
-    @Query("""
+    @Query(
+        """
         SELECT e FROM EmailAccountEntity e
         WHERE e.provider = :provider
         AND e.tokenExpiry IS NOT NULL
         AND e.tokenExpiry < :threshold
-    """)
+    """,
+    )
     fun findAccountsWithLongExpiredTokens(
         @Param("provider") provider: EmailProvider,
-        @Param("threshold") threshold: OffsetDateTime
+        @Param("threshold") threshold: OffsetDateTime,
     ): List<EmailAccountEntity>
 }

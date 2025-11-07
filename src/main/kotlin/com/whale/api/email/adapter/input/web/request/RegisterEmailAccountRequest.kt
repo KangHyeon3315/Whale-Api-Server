@@ -10,19 +10,14 @@ import java.util.UUID
 data class RegisterEmailAccountRequest(
     @field:NotNull(message = "사용자 ID는 필수입니다")
     val userId: UUID,
-
     @field:NotBlank(message = "이메일 주소는 필수입니다")
     @field:Email(message = "올바른 이메일 형식이 아닙니다")
     val emailAddress: String,
-
     @field:NotNull(message = "이메일 제공업체는 필수입니다")
     val provider: EmailProvider,
-
     val displayName: String?,
-
     // Gmail용 OAuth2 인증 코드
     val authorizationCode: String?,
-
     // Naver용 비밀번호
     val password: String?,
 ) {

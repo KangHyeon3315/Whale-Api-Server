@@ -1,11 +1,7 @@
 package com.whale.api.email.adapter.output.email
 
-import com.google.api.client.auth.oauth2.AuthorizationCodeFlow
 import com.google.api.client.auth.oauth2.BearerToken
-import com.google.api.client.auth.oauth2.ClientParametersAuthentication
 import com.google.api.client.auth.oauth2.Credential
-// import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
-// import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse
@@ -23,16 +19,13 @@ import com.whale.api.email.domain.Email
 import com.whale.api.email.domain.EmailAccount
 import com.whale.api.email.domain.property.EmailProperty
 import org.springframework.stereotype.Component
-import java.io.StringReader
 import java.time.OffsetDateTime
-import java.time.ZoneOffset
 import java.util.UUID
 
 @Component
 class GmailAdapter(
     private val emailProperty: EmailProperty,
 ) : GmailProviderOutput {
-
     private val httpTransport: NetHttpTransport = GoogleNetHttpTransport.newTrustedTransport()
     private val jsonFactory = GsonFactory.getDefaultInstance()
 
@@ -49,9 +42,10 @@ class GmailAdapter(
         emailAddress: String,
     ): TokenInfo {
         val flow = createAuthorizationFlow()
-        val tokenResponse = flow.newTokenRequest(authorizationCode)
-            .setRedirectUri(emailProperty.gmailRedirectUri)
-            .execute() as GoogleTokenResponse
+        val tokenResponse =
+            flow.newTokenRequest(authorizationCode)
+                .setRedirectUri(emailProperty.gmailRedirectUri)
+                .execute() as GoogleTokenResponse
 
         return TokenInfo(
             accessToken = tokenResponse.accessToken,
@@ -62,9 +56,10 @@ class GmailAdapter(
 
     override fun refreshAccessToken(refreshToken: String): TokenInfo {
         val flow = createAuthorizationFlow()
-        val credential = Credential(BearerToken.authorizationHeaderAccessMethod())
-            .setAccessToken("")
-            .setRefreshToken(refreshToken)
+        val credential =
+            Credential(BearerToken.authorizationHeaderAccessMethod())
+                .setAccessToken("")
+                .setRefreshToken(refreshToken)
 
         credential.refreshToken()
 
@@ -84,9 +79,10 @@ class GmailAdapter(
         val gmail = createGmailService(emailAccount)
 
         val query = buildQuery(folderName)
-        val request = gmail.users().messages().list("me")
-            .setQ(query)
-            .setMaxResults(maxResults.toLong())
+        val request =
+            gmail.users().messages().list("me")
+                .setQ(query)
+                .setMaxResults(maxResults.toLong())
 
         if (pageToken != null) {
             request.pageToken = pageToken
@@ -95,14 +91,15 @@ class GmailAdapter(
         val response: ListMessagesResponse = request.execute()
         val messages = response.messages ?: emptyList()
 
-        val emails = messages.mapNotNull { messageRef ->
-            try {
-                getEmailFromMessage(gmail, messageRef.id, emailAccount.identifier)
-            } catch (e: Exception) {
-                // 개별 메시지 처리 실패 시 로그 후 계속 진행
-                null
+        val emails =
+            messages.mapNotNull { messageRef ->
+                try {
+                    getEmailFromMessage(gmail, messageRef.id, emailAccount.identifier)
+                } catch (e: Exception) {
+                    // 개별 메시지 처리 실패 시 로그 후 계속 진행
+                    null
+                }
             }
-        }
 
         return EmailSyncResult(
             emails = emails,
@@ -128,8 +125,9 @@ class GmailAdapter(
         messageId: String,
     ) {
         val gmail = createGmailService(emailAccount)
-        val modifyRequest = ModifyMessageRequest()
-            .setRemoveLabelIds(listOf("UNREAD"))
+        val modifyRequest =
+            ModifyMessageRequest()
+                .setRemoveLabelIds(listOf("UNREAD"))
 
         gmail.users().messages().modify("me", messageId, modifyRequest).execute()
     }
@@ -139,32 +137,36 @@ class GmailAdapter(
         messageId: String,
     ) {
         val gmail = createGmailService(emailAccount)
-        val modifyRequest = ModifyMessageRequest()
-            .setAddLabelIds(listOf("UNREAD"))
+        val modifyRequest =
+            ModifyMessageRequest()
+                .setAddLabelIds(listOf("UNREAD"))
 
         gmail.users().messages().modify("me", messageId, modifyRequest).execute()
     }
 
     private fun createAuthorizationFlow(): GoogleAuthorizationCodeFlow {
-        val clientSecrets = GoogleClientSecrets().apply {
-            web = GoogleClientSecrets.Details().apply {
-                clientId = emailProperty.gmailClientId
-                clientSecret = emailProperty.gmailClientSecret
+        val clientSecrets =
+            GoogleClientSecrets().apply {
+                web =
+                    GoogleClientSecrets.Details().apply {
+                        clientId = emailProperty.gmailClientId
+                        clientSecret = emailProperty.gmailClientSecret
+                    }
             }
-        }
 
         return GoogleAuthorizationCodeFlow.Builder(
             httpTransport,
             jsonFactory,
             clientSecrets,
-            emailProperty.gmailScopes
+            emailProperty.gmailScopes,
         ).setAccessType("offline").build()
     }
 
     private fun createGmailService(emailAccount: EmailAccount): Gmail {
-        val credential = Credential(BearerToken.authorizationHeaderAccessMethod())
-            .setAccessToken(emailAccount.accessToken)
-            .setRefreshToken(emailAccount.refreshToken)
+        val credential =
+            Credential(BearerToken.authorizationHeaderAccessMethod())
+                .setAccessToken(emailAccount.accessToken)
+                .setRefreshToken(emailAccount.refreshToken)
 
         return Gmail.Builder(httpTransport, jsonFactory, credential)
             .setApplicationName("Whale Email Manager")
@@ -187,9 +189,10 @@ class GmailAdapter(
         messageId: String,
         accountIdentifier: UUID,
     ): Email {
-        val message: Message = gmail.users().messages().get("me", messageId)
-            .setFormat("full")
-            .execute()
+        val message: Message =
+            gmail.users().messages().get("me", messageId)
+                .setFormat("full")
+                .execute()
 
         val headers = message.payload?.headers ?: emptyList()
         val headerMap = headers.associate { it.name to it.value }

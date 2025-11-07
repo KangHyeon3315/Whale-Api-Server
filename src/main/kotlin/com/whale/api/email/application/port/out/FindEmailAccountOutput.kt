@@ -25,7 +25,13 @@ interface FindEmailAccountOutput {
 
     fun findStaleAccounts(hours: Int): List<EmailAccount>
 
-    fun findAccountsWithExpiringTokens(provider: EmailProvider, expiryThresholdHours: Int): List<EmailAccount>
+    fun findAccountsWithExpiringTokens(
+        provider: EmailProvider,
+        expiryThresholdHours: Int,
+    ): List<EmailAccount>
 
-    fun findAccountsWithLongExpiredTokens(provider: EmailProvider, expiredDays: Int): List<EmailAccount>
+    fun findAccountsWithLongExpiredTokens(
+        provider: EmailProvider,
+        expiredDays: Int,
+    ): List<EmailAccount>
 }

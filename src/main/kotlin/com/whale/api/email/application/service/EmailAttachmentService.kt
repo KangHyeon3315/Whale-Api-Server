@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -40,9 +39,10 @@ class EmailAttachmentService(
         val email = findEmailOutput.findByIdentifier(emailId) ?: return null
 
         // 첨부파일 조회
-        val attachment = findEmailAttachmentOutput.findByEmailIdentifierAndAttachmentId(
-            emailId, attachmentId
-        ) ?: return null
+        val attachment =
+            findEmailAttachmentOutput.findByEmailIdentifierAndAttachmentId(
+                emailId, attachmentId,
+            ) ?: return null
 
         // 이미 다운로드된 파일이 있는지 확인
         attachment.localFilePath?.let { filePath ->
@@ -54,10 +54,12 @@ class EmailAttachmentService(
         }
 
         // 제공업체별 다운로드
-        return when (email.emailAccountIdentifier.let { accountId ->
-            // 계정 정보 조회 필요 (간소화를 위해 생략)
-            EmailProvider.GMAIL // 임시
-        }) {
+        return when (
+            email.emailAccountIdentifier.let { accountId ->
+                // 계정 정보 조회 필요 (간소화를 위해 생략)
+                EmailProvider.GMAIL // 임시
+            }
+        ) {
             EmailProvider.GMAIL -> downloadGmailAttachment(email, attachment)
             EmailProvider.NAVER -> downloadNaverAttachment(email, attachment)
         }
@@ -144,15 +146,15 @@ class EmailAttachmentService(
             }
 
             // 첨부파일 정보 업데이트
-            val updatedAttachment = attachment.copy(
-                localFilePath = filePath.toString(),
-                modifiedDate = OffsetDateTime.now()
-            )
+            val updatedAttachment =
+                attachment.copy(
+                    localFilePath = filePath.toString(),
+                    modifiedDate = OffsetDateTime.now(),
+                )
 
             saveEmailAttachmentOutput.save(updatedAttachment)
 
             logger.info("Saved attachment to local: $filePath")
-
         } catch (e: Exception) {
             logger.error("Failed to save attachment to local: ${attachment.filename}", e)
         }
@@ -179,20 +181,19 @@ class EmailAttachmentService(
                     }
 
                     // 첨부파일 정보에서 로컬 경로 제거
-                    val updatedAttachment = attachment.copy(
-                        localFilePath = null,
-                        modifiedDate = OffsetDateTime.now()
-                    )
+                    val updatedAttachment =
+                        attachment.copy(
+                            localFilePath = null,
+                            modifiedDate = OffsetDateTime.now(),
+                        )
 
                     saveEmailAttachmentOutput.save(updatedAttachment)
-
                 } catch (e: Exception) {
                     logger.error("Failed to cleanup attachment: ${attachment.filename}", e)
                 }
             }
 
             logger.info("Completed cleanup of old attachments")
-
         } catch (e: Exception) {
             logger.error("Error occurred during attachment cleanup", e)
         }

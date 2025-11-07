@@ -6,12 +6,12 @@ import java.util.UUID
 
 interface GetEmailUseCase {
     fun getEmailAccounts(userId: String): List<EmailAccount>
-    
+
     fun getEmailAccount(
         userId: String,
         accountId: UUID,
     ): EmailAccount?
-    
+
     fun getEmails(
         userId: String,
         accountId: UUID,
@@ -20,12 +20,12 @@ interface GetEmailUseCase {
         limit: Int = 50,
         offset: Int = 0,
     ): List<Email>
-    
+
     fun getEmail(
         userId: String,
         emailId: UUID,
     ): Email?
-    
+
     fun searchEmails(
         userId: String,
         accountId: UUID? = null,
