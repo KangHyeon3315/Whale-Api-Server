@@ -131,13 +131,12 @@ class ArchiveWebController(
     fun getArchiveItems(
         @PathVariable archiveId: UUID,
         @RequestParam("fileName", required = false) fileName: String?,
-        @RequestParam("cursor", required = false) cursor: String?,
+        @RequestParam("cursor", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) cursor: OffsetDateTime?,
         @RequestParam("limit", required = false, defaultValue = "20") limit: Int,
     ): ResponseEntity<ArchiveItemPageResponse> {
         logger.info { "Getting archive items: archiveId=$archiveId, fileName=$fileName, cursor=$cursor, limit=$limit" }
 
-        val cursorDate = cursor?.let { OffsetDateTime.parse(it) }
-        val page = getArchiveItemsUseCase.getArchiveItems(archiveId, fileName, null, cursorDate, limit)
+        val page = getArchiveItemsUseCase.getArchiveItems(archiveId, fileName, null, cursor, limit)
 
         logger.info {
             "Retrieved ${page.items.size} items for archive: $archiveId " +
