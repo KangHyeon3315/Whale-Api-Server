@@ -1,5 +1,10 @@
 FROM openjdk:21-jdk
 
+# ffmpeg 설치 (비디오 썸네일 생성용)
+RUN apt-get update && \
+    apt-get install -y ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
+
 EXPOSE 8080
 
 ADD ./build/libs/whale-api-server-0.0.1-SNAPSHOT.jar app.jar

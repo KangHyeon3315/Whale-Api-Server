@@ -272,19 +272,26 @@ class ArchiveFileAdapter(
             ProcessBuilder(
                 "ffmpeg",
                 "-i", videoPath,
-                "-ss", "00:00:01.000",
+                "-ss", "1",
                 "-vframes", "1",
-                "-s", "200x200",
+                "-vf", "scale=200:200:force_original_aspect_ratio=decrease,pad=200:200:(ow-iw)/2:(oh-ih)/2",
                 "-y",
                 thumbnailPath,
             )
 
+        processBuilder.redirectErrorStream(true)
         val process = processBuilder.start()
+
+        // FFmpeg 출력 로깅
+        val output = process.inputStream.bufferedReader().readText()
         val exitCode = process.waitFor()
 
-        if (exitCode != 0) {
+        if (exitCode != 0 || !Files.exists(Paths.get(thumbnailPath)) || Files.size(Paths.get(thumbnailPath)) == 0L) {
+            logger.error { "FFmpeg failed to generate thumbnail. Exit code: $exitCode, Output: $output" }
             throw RuntimeException("Failed to create video thumbnail. FFmpeg exit code: $exitCode")
         }
+
+        logger.debug { "Successfully created video thumbnail: $thumbnailPath" }
     }
 
     override fun readThumbnail(
