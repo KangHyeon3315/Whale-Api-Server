@@ -1,4 +1,4 @@
-FROM openjdk:21-jdk
+FROM eclipse-temurin:21-jdk-jammy
 
 # ffmpeg 설치 (비디오 썸네일 생성용)
 RUN apt-get update && \
