@@ -18,6 +18,10 @@ spring:
     multipart:
       max-file-size: 100MB
       max-request-size: 100MB
+      # 1MB 이상의 파일은 임시 파일로 저장하여 메모리 사용 최소화
+      file-size-threshold: 1MB
+      # 임시 파일 저장 위치
+      location: ${java.io.tmpdir}/whale-uploads
 
   #---- Datasource Setting ----
   datasource:

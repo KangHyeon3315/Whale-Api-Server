@@ -14,6 +14,7 @@ import com.whale.api.archive.application.port.`in`.GetArchiveStatusUseCase
 import com.whale.api.archive.application.port.`in`.UploadArchiveItemUseCase
 import com.whale.api.archive.application.port.`in`.command.UploadArchiveItemCommand
 import com.whale.api.global.annotation.RequireAuth
+import jakarta.servlet.http.HttpServletRequest
 import mu.KotlinLogging
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
+import org.springframework.web.multipart.support.StandardMultipartHttpServletRequest
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -70,6 +72,85 @@ class ArchiveWebController(
         return ResponseEntity.ok(ArchiveResponse.from(archive))
     }
 
+    /**
+     * 스트리밍 방식 파일 업로드 (메모리 효율적)
+     * Servlet Part API를 사용하여 대용량 파일을 메모리에 전체 로드하지 않고 스트리밍으로 처리합니다.
+     */
+    @RequireAuth
+    @PostMapping("/{archiveId}/items/streaming")
+    fun uploadItemStreaming(
+        @PathVariable archiveId: UUID,
+        request: HttpServletRequest,
+    ): ResponseEntity<ArchiveItemResponse> {
+        logger.info { "Streaming upload to archive: $archiveId" }
+
+        // Servlet Part API를 사용하여 스트리밍 처리
+        val multipartRequest =
+            request as? StandardMultipartHttpServletRequest
+                ?: throw IllegalArgumentException("Request must be multipart")
+
+        val filePart =
+            multipartRequest.getFile("file")
+                ?: throw IllegalArgumentException("File part is required")
+
+        val livePhotoVideoPart = multipartRequest.getFile("livePhotoVideo")
+
+        val originalPath =
+            request.getParameter("originalPath")
+                ?: throw IllegalArgumentException("originalPath is required")
+
+        val isLivePhoto = request.getParameter("isLivePhoto")?.toBoolean() ?: false
+
+        val originalCreatedDate =
+            request.getParameter("originalCreatedDate")?.let {
+                OffsetDateTime.parse(it)
+            }
+
+        val originalModifiedDate =
+            request.getParameter("originalModifiedDate")?.let {
+                OffsetDateTime.parse(it)
+            }
+
+        val metadataJson = request.getParameter("metadata")
+
+        logger.info {
+            "Streaming upload: file=${filePart.originalFilename} (${filePart.size} bytes), " +
+                "originalPath=$originalPath, isLivePhoto=$isLivePhoto"
+        }
+
+        // JSON 문자열을 Map으로 파싱
+        val metadata =
+            try {
+                if (metadataJson.isNullOrBlank()) {
+                    emptyMap()
+                } else {
+                    objectMapper.readValue<Map<String, String>>(metadataJson)
+                }
+            } catch (e: Exception) {
+                logger.warn { "Failed to parse metadata JSON: $metadataJson" }
+                emptyMap<String, String>()
+            }
+
+        val command =
+            UploadArchiveItemCommand(
+                archiveIdentifier = archiveId,
+                file = filePart,
+                originalPath = originalPath,
+                isLivePhoto = isLivePhoto,
+                livePhotoVideo = livePhotoVideoPart,
+                originalCreatedDate = originalCreatedDate,
+                originalModifiedDate = originalModifiedDate,
+                metadata = metadata,
+            )
+
+        val archiveItem = uploadArchiveItemUseCase.uploadItem(command)
+        return ResponseEntity.ok(ArchiveItemResponse.from(archiveItem))
+    }
+
+    /**
+     * 기존 MultipartFile 방식 업로드 (하위 호환성 유지)
+     * 작은 파일의 경우 이 방식을 사용할 수 있습니다.
+     */
     @RequireAuth
     @PostMapping("/{archiveId}/items")
     fun uploadItem(

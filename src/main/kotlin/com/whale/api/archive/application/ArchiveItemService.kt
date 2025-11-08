@@ -62,34 +62,42 @@ class ArchiveItemService(
                 throw IllegalArgumentException("File size exceeds maximum allowed size")
             }
 
-            // 4. 파일 저장 (파일 타입에 따라 경로 분류)
+            // 4. 스트리밍 방식으로 파일 저장 + 체크섬 계산 (한 번의 읽기)
             val fileCategory = archiveProperty.getFileCategory(".$extension")
             val relativePath = "${archive.identifier}/$fileCategory/${UUID.randomUUID()}"
-            val storedPath = fileStorageOutput.storeFile(command.file, relativePath)
 
-            // 5. 라이브 포토 비디오 저장 (있는 경우)
+            val fileResult =
+                command.file.inputStream.use { inputStream ->
+                    fileStorageOutput.storeFileWithChecksum(inputStream, fileName, relativePath)
+                }
+
+            // 5. 라이브 포토 비디오 저장 (있는 경우) - 스트리밍 방식
             var livePhotoVideoPath: String? = null
             if (command.isLivePhoto && command.livePhotoVideo != null) {
                 val videoRelativePath = "${archive.identifier}/live-photos/${UUID.randomUUID()}"
-                livePhotoVideoPath = fileStorageOutput.storeFile(command.livePhotoVideo, videoRelativePath)
+                val videoFileName = command.livePhotoVideo.originalFilename ?: "video"
+
+                val videoResult =
+                    command.livePhotoVideo.inputStream.use { inputStream ->
+                        fileStorageOutput.storeFileWithChecksum(inputStream, videoFileName, videoRelativePath)
+                    }
+                livePhotoVideoPath = videoResult.storedPath
             }
 
-            // 6. 체크섬 계산
-            val checksum = fileStorageOutput.calculateChecksum(command.file)
-
-            // 7. ArchiveItem 생성
+            // 6. ArchiveItem 생성
+            val mimeType = archiveProperty.getMimeType(".$extension")
             val archiveItem =
                 ArchiveItem(
                     identifier = UUID.randomUUID(),
                     archiveIdentifier = command.archiveIdentifier,
                     originalPath = command.originalPath,
-                    storedPath = storedPath,
+                    storedPath = fileResult.storedPath,
                     fileName = fileName,
-                    fileSize = command.file.size,
-                    mimeType = archiveProperty.getMimeType(".$extension"),
+                    fileSize = fileResult.fileSize,
+                    mimeType = mimeType,
                     isLivePhoto = command.isLivePhoto,
                     livePhotoVideoPath = livePhotoVideoPath,
-                    checksum = checksum,
+                    checksum = fileResult.checksum,
                     originalCreatedDate = command.originalCreatedDate,
                     originalModifiedDate = command.originalModifiedDate,
                     createdDate = OffsetDateTime.now(),
@@ -98,18 +106,16 @@ class ArchiveItemService(
 
             val savedItem = saveArchiveItemOutput.save(archiveItem)
 
-            // 8. 메타데이터 추출 및 저장
+            // 7. 메타데이터 추출 및 저장 (저장된 파일에서 추출 - 메모리 효율적)
             try {
                 val extractedMetadata =
-                    if (command.isLivePhoto && command.livePhotoVideo != null) {
-                        metadataExtractionOutput.extractLivePhotoMetadata(
-                            command.file,
-                            command.livePhotoVideo,
-                            savedItem.identifier,
-                        )
-                    } else {
-                        metadataExtractionOutput.extractMetadata(command.file, savedItem.identifier)
-                    }
+                    metadataExtractionOutput.extractMetadataFromFile(
+                        filePath = fileResult.storedPath,
+                        fileName = fileName,
+                        mimeType = mimeType,
+                        fileSize = fileResult.fileSize,
+                        archiveItemIdentifier = savedItem.identifier,
+                    )
 
                 // 추가 메타데이터가 있으면 함께 저장
                 val allMetadata = extractedMetadata.toMutableList()
@@ -126,7 +132,7 @@ class ArchiveItemService(
                 logger.warn(e) { "Failed to extract metadata for item: ${savedItem.identifier}" }
             }
 
-            // 9. Archive 진행 상태 업데이트 및 자동 완료 체크
+            // 8. Archive 진행 상태 업데이트 및 자동 완료 체크
             val isCompleted = archive.incrementProcessedItemsAndCheckCompletion()
             saveArchiveOutput.save(archive)
 

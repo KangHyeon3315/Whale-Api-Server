@@ -3,6 +3,7 @@ package com.whale.api.archive.adapter.output.file
 import com.whale.api.archive.application.port.out.FileStorageOutput
 import com.whale.api.archive.application.port.out.ReadArchiveFileOutput
 import com.whale.api.archive.application.port.out.ReadArchiveItemContentOutput
+import com.whale.api.archive.application.port.out.StreamingFileResult
 import com.whale.api.archive.domain.ArchiveFileResource
 import com.whale.api.archive.domain.property.ArchiveProperty
 import mu.KotlinLogging
@@ -93,6 +94,51 @@ class ArchiveFileAdapter(
         }
     }
 
+    override fun storeFileWithChecksum(
+        inputStream: InputStream,
+        fileName: String,
+        relativePath: String,
+    ): StreamingFileResult {
+        val targetPath = Paths.get(archiveProperty.basePath, relativePath, fileName)
+
+        try {
+            // 디렉토리 생성
+            Files.createDirectories(targetPath.parent)
+
+            val digest = MessageDigest.getInstance("SHA-256")
+            var totalBytes = 0L
+
+            // 한 번의 스트림 읽기로 파일 저장 + 체크섬 계산
+            inputStream.use { input ->
+                Files.newOutputStream(targetPath).use { output ->
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        // 파일 저장
+                        output.write(buffer, 0, bytesRead)
+                        // 체크섬 계산
+                        digest.update(buffer, 0, bytesRead)
+                        totalBytes += bytesRead
+                    }
+                }
+            }
+
+            val checksum = digest.digest().joinToString("") { "%02x".format(it) }
+
+            logger.info { "File stored with checksum successfully: $targetPath (size: $totalBytes bytes, checksum: $checksum)" }
+
+            return StreamingFileResult(
+                storedPath = targetPath.toString(),
+                checksum = checksum,
+                fileSize = totalBytes,
+            )
+        } catch (e: Exception) {
+            logger.error(e) { "Failed to store file with checksum: $relativePath/$fileName" }
+            throw RuntimeException("Failed to store file with checksum", e)
+        }
+    }
+
     override fun calculateChecksum(file: MultipartFile): String {
         return file.inputStream.use { inputStream ->
             calculateChecksum(inputStream)
@@ -113,6 +159,22 @@ class ArchiveFileAdapter(
         } catch (e: Exception) {
             logger.error(e) { "Failed to calculate checksum" }
             throw RuntimeException("Failed to calculate checksum", e)
+        }
+    }
+
+    override fun calculateChecksumFromFile(filePath: String): String {
+        return try {
+            val path = Paths.get(filePath)
+            if (!Files.exists(path)) {
+                throw RuntimeException("File not found: $filePath")
+            }
+
+            Files.newInputStream(path).use { inputStream ->
+                calculateChecksum(inputStream)
+            }
+        } catch (e: Exception) {
+            logger.error(e) { "Failed to calculate checksum from file: $filePath" }
+            throw RuntimeException("Failed to calculate checksum from file", e)
         }
     }
 
