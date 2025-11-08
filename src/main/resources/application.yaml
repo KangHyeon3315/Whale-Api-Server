@@ -13,6 +13,12 @@ spring:
     format:
       date: yyyy-MM-dd
 
+  #---- Static Resource Setting ----
+  web:
+    resources:
+      # 정적 리소스 자동 매핑 비활성화 (REST API와 충돌 방지)
+      add-mappings: false
+
   #---- File Upload Setting ----
   servlet:
     multipart:
