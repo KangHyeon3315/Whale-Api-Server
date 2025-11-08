@@ -6,4 +6,6 @@ import java.util.UUID
 
 interface ArchiveMetadataRepository : JpaRepository<ArchiveMetadataEntity, UUID> {
     fun findByArchiveItemIdentifier(archiveItemIdentifier: UUID): List<ArchiveMetadataEntity>
+
+    fun deleteByArchiveItemIdentifier(archiveItemIdentifier: UUID)
 }

@@ -8,6 +8,7 @@ import com.whale.api.archive.adapter.output.persistence.entity.QArchiveItemEntit
 import com.whale.api.archive.adapter.output.persistence.repository.ArchiveItemRepository
 import com.whale.api.archive.adapter.output.persistence.repository.ArchiveMetadataRepository
 import com.whale.api.archive.adapter.output.persistence.repository.ArchiveRepository
+import com.whale.api.archive.application.port.out.DeleteArchiveItemOutput
 import com.whale.api.archive.application.port.out.FindArchiveItemOutput
 import com.whale.api.archive.application.port.out.FindArchiveMetadataOutput
 import com.whale.api.archive.application.port.out.FindArchiveOutput
@@ -32,7 +33,8 @@ class ArchivePersistenceAdapter(
     SaveArchiveItemOutput,
     FindArchiveItemOutput,
     SaveArchiveMetadataOutput,
-    FindArchiveMetadataOutput {
+    FindArchiveMetadataOutput,
+    DeleteArchiveItemOutput {
     override fun save(archive: Archive): Archive {
         return archiveRepository.save(archive.toEntity()).toDomain()
     }
@@ -149,5 +151,13 @@ class ArchivePersistenceAdapter(
 
     override fun findByArchiveItemIdentifier(archiveItemIdentifier: UUID): List<ArchiveMetadata> {
         return archiveMetadataRepository.findByArchiveItemIdentifier(archiveItemIdentifier).map { it.toDomain() }
+    }
+
+    override fun deleteArchiveItem(itemIdentifier: UUID) {
+        archiveItemRepository.deleteById(itemIdentifier)
+    }
+
+    override fun deleteArchiveMetadata(itemIdentifier: UUID) {
+        archiveMetadataRepository.deleteByArchiveItemIdentifier(itemIdentifier)
     }
 }

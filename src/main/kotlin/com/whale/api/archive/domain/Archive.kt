@@ -19,6 +19,13 @@ class Archive(
         modifiedDate = OffsetDateTime.now()
     }
 
+    fun decrementProcessedItems() {
+        if (processedItems > 0) {
+            processedItems--
+            modifiedDate = OffsetDateTime.now()
+        }
+    }
+
     fun incrementProcessedItemsAndCheckCompletion(): Boolean {
         processedItems++
         modifiedDate = OffsetDateTime.now()

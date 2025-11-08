@@ -1,10 +1,12 @@
 package com.whale.api.archive.application
 
 import com.whale.api.archive.application.port.`in`.ArchiveItemPage
+import com.whale.api.archive.application.port.`in`.DeleteArchiveItemUseCase
 import com.whale.api.archive.application.port.`in`.GetArchiveItemContentUseCase
 import com.whale.api.archive.application.port.`in`.GetArchiveItemsUseCase
 import com.whale.api.archive.application.port.`in`.UploadArchiveItemUseCase
 import com.whale.api.archive.application.port.`in`.command.UploadArchiveItemCommand
+import com.whale.api.archive.application.port.out.DeleteArchiveItemOutput
 import com.whale.api.archive.application.port.out.FileStorageOutput
 import com.whale.api.archive.application.port.out.FindArchiveItemOutput
 import com.whale.api.archive.application.port.out.FindArchiveMetadataOutput
@@ -35,10 +37,12 @@ class ArchiveItemService(
     private val metadataExtractionOutput: MetadataExtractionOutput,
     private val archiveProperty: ArchiveProperty,
     private val readArchiveItemContentOutput: ReadArchiveItemContentOutput,
+    private val deleteArchiveItemOutput: DeleteArchiveItemOutput,
     private val writeTransactionTemplate: TransactionTemplate,
 ) : UploadArchiveItemUseCase,
     GetArchiveItemsUseCase,
-    GetArchiveItemContentUseCase {
+    GetArchiveItemContentUseCase,
+    DeleteArchiveItemUseCase {
     private val logger = KotlinLogging.logger {}
 
     override fun uploadItem(command: UploadArchiveItemCommand): ArchiveItem {
@@ -238,5 +242,64 @@ class ArchiveItemService(
         }
 
         return readArchiveItemContentOutput.readTextContentPreview(item.storedPath, maxLength)
+    }
+
+    override fun deleteArchiveItem(itemIdentifier: UUID) {
+        logger.info { "Deleting archive item: $itemIdentifier" }
+
+        writeTransactionTemplate.execute {
+            // 1. 아카이브 아이템 조회
+            val item =
+                findArchiveItemOutput.findArchiveItemById(itemIdentifier)
+                    ?: throw IllegalArgumentException("Archive item not found: $itemIdentifier")
+
+            // 2. 파일 시스템에서 파일 삭제
+            try {
+                val fileDeleted = fileStorageOutput.deleteFile(item.storedPath)
+                if (fileDeleted) {
+                    logger.info { "Successfully deleted file: ${item.storedPath}" }
+                } else {
+                    logger.warn { "Failed to delete file or file not found: ${item.storedPath}" }
+                }
+
+                // 3. 라이브 포토 비디오 파일 삭제 (있는 경우)
+                if (item.isLivePhoto && !item.livePhotoVideoPath.isNullOrBlank()) {
+                    val videoDeleted = fileStorageOutput.deleteFile(item.livePhotoVideoPath)
+                    if (videoDeleted) {
+                        logger.info { "Successfully deleted live photo video: ${item.livePhotoVideoPath}" }
+                    } else {
+                        logger.warn { "Failed to delete live photo video or file not found: ${item.livePhotoVideoPath}" }
+                    }
+                }
+            } catch (e: Exception) {
+                logger.error(e) { "Error deleting files for item: $itemIdentifier" }
+                // 파일 삭제 실패해도 DB 레코드는 삭제 진행
+            }
+
+            // 4. DB에서 메타데이터 삭제
+            try {
+                deleteArchiveItemOutput.deleteArchiveMetadata(itemIdentifier)
+                logger.info { "Successfully deleted metadata for item: $itemIdentifier" }
+            } catch (e: Exception) {
+                logger.error(e) { "Error deleting metadata for item: $itemIdentifier" }
+            }
+
+            // 5. DB에서 아카이브 아이템 삭제
+            deleteArchiveItemOutput.deleteArchiveItem(itemIdentifier)
+            logger.info { "Successfully deleted archive item: $itemIdentifier" }
+
+            // 6. Archive의 processedItems 감소
+            val archive =
+                findArchiveOutput.findArchiveById(item.archiveIdentifier)
+                    ?: throw IllegalArgumentException("Archive not found: ${item.archiveIdentifier}")
+
+            if (archive.processedItems > 0) {
+                archive.decrementProcessedItems()
+                saveArchiveOutput.save(archive)
+                logger.info { "Decremented processedItems for archive: ${archive.identifier} (now ${archive.processedItems})" }
+            }
+        }
+
+        logger.info { "Archive item deleted successfully: $itemIdentifier" }
     }
 }

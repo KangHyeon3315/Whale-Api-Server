@@ -8,6 +8,7 @@ import com.whale.api.archive.adapter.input.web.response.ArchiveItemResponse
 import com.whale.api.archive.adapter.input.web.response.ArchiveMetadataResponse
 import com.whale.api.archive.adapter.input.web.response.ArchiveResponse
 import com.whale.api.archive.application.port.`in`.CreateArchiveUseCase
+import com.whale.api.archive.application.port.`in`.DeleteArchiveItemUseCase
 import com.whale.api.archive.application.port.`in`.GetArchiveItemContentUseCase
 import com.whale.api.archive.application.port.`in`.GetArchiveItemsUseCase
 import com.whale.api.archive.application.port.`in`.GetArchiveStatusUseCase
@@ -18,6 +19,7 @@ import jakarta.servlet.http.HttpServletRequest
 import mu.KotlinLogging
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -38,6 +40,7 @@ class ArchiveWebController(
     private val uploadArchiveItemUseCase: UploadArchiveItemUseCase,
     private val getArchiveItemsUseCase: GetArchiveItemsUseCase,
     private val getArchiveItemContentUseCase: GetArchiveItemContentUseCase,
+    private val deleteArchiveItemUseCase: DeleteArchiveItemUseCase,
     private val objectMapper: ObjectMapper,
 ) {
     private val logger = KotlinLogging.logger {}
@@ -290,5 +293,31 @@ class ArchiveWebController(
         val content = getArchiveItemContentUseCase.getTextContentPreview(itemId, maxLength)
         logger.info { "Serving text content preview: itemId=$itemId, contentLength=${content.length}, maxLength=$maxLength" }
         return ResponseEntity.ok(mapOf("content" to content, "isPreview" to "true"))
+    }
+
+    /**
+     * 아카이브 아이템 삭제
+     * - 파일 시스템에서 실제 파일 삭제
+     * - 라이브 포토 비디오 파일 삭제 (있는 경우)
+     * - DB에서 메타데이터 삭제
+     * - DB에서 아카이브 아이템 삭제
+     */
+    @RequireAuth
+    @DeleteMapping("/{archiveId}/items/{itemId}")
+    fun deleteArchiveItem(
+        @PathVariable archiveId: UUID,
+        @PathVariable itemId: UUID,
+    ): ResponseEntity<Map<String, String>> {
+        logger.info { "Deleting archive item: archiveId=$archiveId, itemId=$itemId" }
+
+        deleteArchiveItemUseCase.deleteArchiveItem(itemId)
+
+        logger.info { "Successfully deleted archive item: itemId=$itemId" }
+        return ResponseEntity.ok(
+            mapOf(
+                "message" to "Archive item deleted successfully",
+                "itemId" to itemId.toString(),
+            ),
+        )
     }
 }
