@@ -15,4 +15,3 @@ interface DeleteArchiveItemUseCase {
      */
     fun deleteArchiveItem(itemIdentifier: UUID)
 }
-
